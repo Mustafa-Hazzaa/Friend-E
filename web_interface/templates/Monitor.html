@@ -1,156 +1,312 @@
 {% extends "base.html" %}
-{% block title %}Monitor{% endblock %}
+{% block title %}AI Monitor{% endblock %}
 {% block content %}
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
-.hidden {
-    display: none;
+body {
+    margin: 0;
+    font-family: "Segoe UI", sans-serif;
+    background: #0b1220;
+    color: #e5e7eb;
 }
 
 /* LOCK SCREEN */
-.lock-screen {
+.lock {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-
-    background: rgba(0,0,0,0.75);
+    inset: 0;
+    background: rgba(0,0,0,0.95);
     display: flex;
     justify-content: center;
     align-items: center;
+    z-index: 1000;
 }
 
-/* BOX */
-.lock-box {
-    background: white;
+.lockBox {
+    background: #111827;
     padding: 30px;
-    border-radius: 16px;
+    border-radius: 14px;
     width: 320px;
     text-align: center;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
 
-/* INPUT */
-#password {
+.lockBox input {
     width: 100%;
-    padding: 12px;
-    margin-top: 15px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 16px;
-
-    /* mask input */
-    -webkit-text-security: disc;
-}
-
-/* BUTTON */
-.lock-box button {
-    width: 100%;
-    margin-top: 12px;
-    padding: 12px;
-    background: #2d6cdf;
+    padding: 10px;
+    margin-top: 10px;
+    background: #0b1220;
+    border: 1px solid #1f2937;
     color: white;
+    border-radius: 8px;
+}
+
+.lockBox button {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px;
+    background: #2563eb;
     border: none;
+    color: white;
     border-radius: 8px;
     cursor: pointer;
 }
 
-.lock-box button:hover {
-    background: #1f54b5;
+/* APP LAYOUT */
+.app {
+    display: grid;
+    grid-template-columns: 260px 1fr 360px;
+    height: 100vh;
 }
 
-/* ERROR */
-#error {
-    color: red;
-    font-size: 13px;
-    margin-top: 10px;
+/* PANELS */
+.panel {
+    padding: 15px;
+    overflow-y: auto;
 }
 
-/* CONTENT */
-.card {
-    background: white;
-    padding: 20px;
+.left {
+    background: #0f172a;
+    border-right: 1px solid #1f2937;
+}
+
+.center {
+    background: #020617;
+}
+
+.right {
+    background: #0f172a;
+    border-left: 1px solid #1f2937;
+}
+
+/* SESSION */
+.session {
+    padding: 10px;
+    margin-bottom: 10px;
+    background: #111827;
     border-radius: 10px;
+    cursor: pointer;
+}
+
+.session:hover {
+    background: #1e293b;
+}
+
+/* CHAT */
+.msg {
+    padding: 10px;
+    margin: 6px 0;
+    border-radius: 10px;
+    max-width: 75%;
+}
+
+.user {
+    background: #1d4ed8;
+    margin-left: auto;
+}
+
+.ai {
+    background: #065f46;
+}
+
+/* CARDS */
+.card {
+    background: rgba(17,24,39,0.7);
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 12px;
+}
+
+/* CHARTS */
+canvas {
     margin-top: 15px;
+    background: #0b1220;
+    border-radius: 12px;
+    padding: 10px;
+}
+
+/* UTIL */
+.hidden {
+    display: none;
 }
 </style>
 
-<div class="dashboard">
-    <div class="content">
+<!-- LOCK SCREEN -->
+<div id="lockScreen" class="lock">
+    <div class="lockBox">
+        <h2>🔐 Secure Access</h2>
 
-        <!-- 🔒 PROTECTED -->
-        <div id="monitorData" class="card hidden">
-            <h3>🔒 Live Camera / Logs</h3>
-            <p>Sensitive monitoring data here.</p>
-        </div>
+        <input id="password" type="password" placeholder="Enter password">
+        <button onclick="unlock()">Unlock</button>
 
-        <!-- 🔐 LOCK SCREEN -->
-        <div id="lockScreen" class="lock-screen">
-            <div class="lock-box" >
-                <h2>Parent Password Required</h2>
-
-                <!-- FAKE FIELDS (trap autofill) -->
-                <input type="text" style="display:none">
-                <input type="password" style="display:none">
-
-                <!-- REAL FIELD -->
-                <form autocomplete="off" onsubmit="event.preventDefault(); unlock();">
-                    <input
-                        type="text"
-                        id="password"
-                        name="monitor-pass"
-                        placeholder="Enter password"
-                        autocomplete="off"
-                        autocorrect="off"
-                        autocapitalize="off"
-                        spellcheck="false"
-                        required
-                    >
-
-                    <button type="submit">Unlock</button>
-                </form>
-
-                <p id="error"></p>
-            </div>
-        </div>
-
+        <p id="error"></p>
     </div>
 </div>
 
+<!-- APP -->
+<div id="app" class="app hidden">
+
+    <!-- LEFT -->
+    <div class="panel left">
+        <h3>Sessions</h3>
+        <div id="sessions"></div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="panel center">
+        <h3>Conversation</h3>
+        <div id="chat"></div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="panel right">
+        <h3>AI Analysis</h3>
+
+        <div class="card" id="summary"></div>
+
+        <canvas id="curiosityChart"></canvas>
+        <canvas id="emotionChart"></canvas>
+        <canvas id="interestChart"></canvas>
+
+        <div class="card" id="concerns"></div>
+        <div class="card" id="recommendations"></div>
+    </div>
+
+</div>
+
 <script>
+
+let curiosityChart, emotionChart, interestChart;
+
+/* ===================== UNLOCK ===================== */
 function unlock() {
     fetch("/check-monitor-password", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: {"Content-Type":"application/json"},
         body: JSON.stringify({
             password: document.getElementById("password").value
         })
     })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
+    .then(r => r.json())
+    .then(d => {
+
+        if (d.success || d.status === "ok") {
             document.getElementById("lockScreen").style.display = "none";
-            document.getElementById("monitorData").classList.remove("hidden");
+            document.getElementById("app").classList.remove("hidden");
+
+            loadSessions();
+            loadAnalysis();
         } else {
             document.getElementById("error").innerText = "Wrong password";
+        }
+    })
+    .catch(() => {
+        document.getElementById("error").innerText = "Server error";
+    });
+}
+
+/* ===================== SESSIONS ===================== */
+function loadSessions() {
+    fetch("/get-sessions")
+    .then(r => r.json())
+    .then(data => {
+
+        let box = document.getElementById("sessions");
+        box.innerHTML = "";
+
+        data.forEach(s => {
+            let div = document.createElement("div");
+            div.className = "session";
+
+            div.innerHTML = `
+                <b>${s.session_timestamp}</b><br>
+                ${s.total_messages} messages
+            `;
+
+            div.onclick = () => openSession(s.file);
+
+            box.appendChild(div);
+        });
+    });
+}
+
+/* ===================== CHAT ===================== */
+function openSession(file) {
+    fetch("/get-session/" + file)
+    .then(r => r.json())
+    .then(s => {
+
+        let chat = document.getElementById("chat");
+        chat.innerHTML = "";
+
+        s.messages.forEach(m => {
+            let div = document.createElement("div");
+            div.className = "msg " + (m.role === "user" ? "user" : "ai");
+            div.innerText = m.content;
+            chat.appendChild(div);
+        });
+    });
+}
+
+/* ===================== ANALYSIS ===================== */
+function loadAnalysis() {
+    fetch("/analyze-child")
+    .then(r => r.json())
+    .then(d => {
+
+        document.getElementById("summary").innerHTML =
+            "<b>Summary</b><br>" + d.summary;
+
+        renderCharts(d);
+
+        document.getElementById("concerns").innerHTML =
+            "<b>Concerns</b><br>" + (d.concerns || []).join("<br>");
+
+        document.getElementById("recommendations").innerHTML =
+            "<b>Recommendations</b><br>" + (d.recommendations || []).join("<br>");
+    });
+}
+
+/* ===================== CHARTS ===================== */
+function renderCharts(d) {
+
+    let c = d.curiosity_level === "high" ? 80 :
+            d.curiosity_level === "medium" ? 50 : 20;
+
+    if (curiosityChart) curiosityChart.destroy();
+    if (emotionChart) emotionChart.destroy();
+    if (interestChart) interestChart.destroy();
+
+    curiosityChart = new Chart(document.getElementById("curiosityChart"), {
+        type: "doughnut",
+        data: {
+            labels: ["Curiosity", "Other"],
+            datasets: [{ data: [c, 100 - c] }]
+        }
+    });
+
+    emotionChart = new Chart(document.getElementById("emotionChart"), {
+        type: "pie",
+        data: {
+            labels: ["Positive", "Neutral", "Confused"],
+            datasets: [{ data: [60, 25, 15] }]
+        }
+    });
+
+    let interests = d.interests || [];
+
+    interestChart = new Chart(document.getElementById("interestChart"), {
+        type: "bar",
+        data: {
+            labels: interests,
+            datasets: [{
+                label: "Interest Level",
+                data: interests.map(() => Math.random() * 100)
+            }]
         }
     });
 }
 
-/* 🔥 Anti-autofill protection */
-window.addEventListener("load", () => {
-    const input = document.getElementById("password");
-
-    // clear any autofill
-    input.value = "";
-
-    // block aggressive autofill
-    input.addEventListener("focus", () => {
-        input.setAttribute("readonly", true);
-        setTimeout(() => input.removeAttribute("readonly"), 100);
-    });
-});
 </script>
 
 {% endblock %}

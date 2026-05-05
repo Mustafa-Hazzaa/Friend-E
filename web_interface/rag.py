@@ -1,11 +1,11 @@
-# rag.py
-# Session-only RAG store — embeddings live in memory, cleared when session ends.
-# Uses sentence-transformers for local embedding, numpy for similarity search.
-
 import numpy as np
 from sentence_transformers import SentenceTransformer
+import os
 
-_model = None
+os.environ["HF_HOME"] = r"C:\Users\musta\.cache\huggingface"
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+
+_model = None  # ← must be here, at module level
 
 def _get_model():
     global _model
@@ -14,7 +14,16 @@ def _get_model():
         _model = SentenceTransformer("all-MiniLM-L6-v2")
         print("[RAG] Embedding model ready.")
     return _model
+def embed_text(text: str) -> np.ndarray:
+    model = _get_model()
+    return model.encode(
+        text,
+        convert_to_numpy=True,
+        normalize_embeddings=True
+    )
 
+def similarity(a: np.ndarray, b: np.ndarray) -> float:
+    return float(a @ b)
 
 class RAGStore:
 

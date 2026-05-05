@@ -402,34 +402,22 @@ async function summarize() {
 
 async function ask() {
   if (!uploadedFile) return alert("Upload a file first");
-  const question = prompt("Ask a question:");
-  if (!question) return;
-  const res  = await fetch("pdf/qa", {
+  const res = await fetch("pdf/qa/run", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ filename: uploadedFile, question })
+    body: JSON.stringify({ filename: uploadedFile })
   });
   const data = await res.json();
-  result.textContent = data.answer;
 }
 
 async function teachback() {
-    if (!uploadedFile) return alert("Upload a file first");
-
-    const explanation = prompt("Explain what you learned from the document:");
-    if (!explanation) return;
-
-    const res = await fetch("pdf/teachback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            filename: uploadedFile,
-            explanation
-        })
-    });
-
-    const data = await res.json();
-    result.textContent = data.feedback;
+  if (!uploadedFile) return alert("Upload a file first");
+  const res = await fetch("pdf/teachback/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filename: uploadedFile })
+  });
+  const data = await res.json();
 }
 
 /* ── Quiz modal-*/
@@ -480,15 +468,12 @@ function startQuiz() {
 
 async function quiz(count, difficulty) {
   if (!uploadedFile) return alert("Upload a file first");
-  console.log(`Starting quiz: ${count} questions, ${difficulty} difficulty, file: ${uploadedFile}`);
-    if (!uploadedFile) return alert("Upload a file first");
-  const res  = await fetch("pdf/quiz/generate", {
+  const res = await fetch("pdf/quiz/run", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ filename: uploadedFile,count:count,difficulty:difficulty })
+    body: JSON.stringify({ filename: uploadedFile, count: count, difficulty: difficulty })
   });
   const data = await res.json();
-  result.textContent = data.result;
 }
 
 /* ── Restore session ────────────────────── */

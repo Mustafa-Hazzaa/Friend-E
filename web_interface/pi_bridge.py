@@ -1,26 +1,54 @@
-from collections import deque
-import threading
-from flask import Blueprint, request, jsonify
+import requests
+from flask import current_app
 
-pi_bridge = Blueprint('pi_bridge', __name__)
 
-command_queue = deque()
-queue_lock = threading.Lock()
 
-def push_command(cmd: dict):
-    with queue_lock:
-        command_queue.append(cmd)
 
-@pi_bridge.route('/next_command', methods=['GET'])
-def next_command():
-    with queue_lock:
-        if command_queue:
-            return jsonify(command_queue.popleft())
-    return jsonify({"type": "idle"})
+def speak(text: str, lang: str = "en") -> bool:
+    """
+    Send text to the Pi's TTS and BLOCK until it finishes speaking.
+    The Pi /speak endpoint must be synchronous (wait for eSpeak to finish)
+    for the listen() call after it to work correctly.
+    """
+    try:
+        r = requests.post(
+            f"{_pi_url()}/speak",
+            json={"text": text, "lang": lang},
+            timeout=60,   # eSpeak on a long sentence can take a few seconds
+        )
+        return r.ok
+    except requests.RequestException as e:
+        current_app.logger.error(f"[Pi] speak failed: {e}")
+        return False
 
-@pi_bridge.route('/voice_answer', methods=['POST'])
-def voice_answer():
-    data = request.get_json()
-    answer = data.get("text", "")
-    # pass answer to your existing AI code here
-    return jsonify({"status": "OK"})
+
+def listen(timeout: float = 15.0, language: str = None) -> str:
+    """
+    Arm the Pi's STT and wait for one utterance.
+
+    timeout    — how long (seconds) to wait for the child to speak.
+                 Passed to the Pi so it knows when to give up.
+    http_wait  — we give the HTTP connection (timeout + 10) seconds,
+                 which is always longer than the STT timeout so the
+                 connection never dies before the Pi replies.
+    """
+    payload = {"timeout": timeout}
+    if language:
+        payload["language"] = language
+
+    http_wait = timeout + 10   # always longer than STT timeout
+
+    try:
+        r = requests.post(
+            f"{_pi_url()}/transcribe",
+            json=payload,
+            timeout=http_wait,
+        )
+        return r.json().get("text", "")
+    except requests.RequestException as e:
+        current_app.logger.error(f"[Pi] listen failed: {e}")
+        return ""
+
+
+def _pi_url() -> str:
+    return current_app.config["PI_URL"].rstrip("/")

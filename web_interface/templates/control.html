@@ -124,12 +124,17 @@
 <!-- TTS BAR -->
 <div class="tts-bar">
   <span class="tts-label">SAY·THIS</span>
-  <input class="tts-input" type="text" id="tts_text" placeholder="Type something for Wall·E to say…" maxlength="300">
-  <button class="tts-btn" onclick="playTTS($('#tts_text').val())">▶ speak</button>
+
+  <input class="tts-input" type="text"
+         id="tts_text"
+         placeholder="Type something for Wall·E to say…"
+         maxlength="300">
+
+  <button class="tts-btn" id="tts_btn">▶ speak</button>
 </div>
+
 <div id="audio-progress"></div>
 
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script>
 document.getElementById('s-drawer').classList.add('open');
 document.getElementById('tts_text').addEventListener('keydown', e => { if(e.key==='Enter') playTTS($('#tts_text').val()); });

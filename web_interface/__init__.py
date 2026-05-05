@@ -27,10 +27,10 @@ def create_app():
     from web_interface.view import view
     from web_interface.pdf import pdf
     from web_interface.control import control
-    from .pi_bridge import pi_bridge
+    from web_interface.monitor import monitor_bp
     # from web_interface.settings import settings
 
-    app.register_blueprint(pi_bridge,url_prefix="/")
+    app.register_blueprint(monitor_bp, url_prefix="/")
     app.register_blueprint(auth, url_prefix='/auth')
     app.register_blueprint(view, url_prefix='/')
     app.register_blueprint(pdf, url_prefix='/pdf')

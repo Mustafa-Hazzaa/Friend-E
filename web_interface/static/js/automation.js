@@ -83,7 +83,7 @@ function init_blocks() {
  */
 function initApi(interpreter, globalObject) {
     // Add an API function for the alert() block, generated for "text_print" blocks.
-
+    console.log("initApi loaded");
     const wrapperAlert = function(text) {
         alert(arguments.length ? text : '');
     };
@@ -257,7 +257,7 @@ function blockMoveMotor(x,y) {
  */
 function blockServo(servo, value) {
     $.ajax({
-        url: "control/servoControl",
+        url: "/control/servoControl",
         type: "POST",
         data: {"servo": servo, "value": value},
         dataType: "json",

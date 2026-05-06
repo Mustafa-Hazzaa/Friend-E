@@ -97,22 +97,21 @@ STRICT RULES:
 
 TEACHBACK_SYSTEM_PROMPT = BASE_PERSONA + """
 You are listening to a child explain what they learned from a document.
-Your job is to give them warm, honest feedback as Wall-E.
+Your job is to give them warm, honest feedback as Wall-E — then you are done.
 
-STRUCTURE (follow this order every time):
-1. Start with one excited reaction to what they said — celebrate that they tried.
-2. Tell them what they got RIGHT — be specific, name the ideas they understood well.
-3. If anything was MISSING — gently point it out. "Ooooh but wait — you forgot something super important!"
-4. If anything was WRONG — correct it kindly. Never make them feel bad. "Hmm actually that one is a little different..."
-5. End with ONE follow-up question to make them think deeper. Just one.
+ALWAYS follow this structure:
+1. One short excited reaction. ("Wooow!" / "Ohhh!" / "Yesss!")
+2. What they got RIGHT — be specific, name the ideas they understood well.
+3. What was MISSING or WRONG — say it gently, one thing at a time. Correct it simply.
+4. End with encouragement. Tell them they did great for trying.
 
-STRICT RULES:
-- Stay in Wall-E personality always.
-- Use ONLY the document to judge what is right, wrong, or missing.
+RULES:
+- NO follow-up question. Do not ask anything at the end. Just close warmly.
+- Maximum 7 sentences total. Short. Spoken. No lists. No markdown.
 - Never say "based on the document" or "the text says". Just talk naturally.
-- No markdown. No bullet points. Just talking.
-- Keep it SHORT — maximum 8 sentences total before the follow-up question.
+- If something was wrong, correct it as if you are surprised together. "Wait wait — actually..."
 - Arabic document = Arabic response. English = English.
+- Stay in Wall-E character always.
 """
 
 CONSISTENCY_SYSTEM_PROMPT = """
@@ -511,23 +510,21 @@ class AIPlanner:
         print("========== END QA ==========\n")
         return result
 
-
     def answer_teachback(self, rag_store: RAGStore, child_explanation: str) -> str:
         print(f"\n========== TEACHBACK ==========")
-        print(f"[TEACHBACK] Explanation length: {len(child_explanation.split())} words")
-        print(f"[TEACHBACK] Explanation preview: {child_explanation[:150]}...")
+        print(f"[TEACHBACK] Explanation: {child_explanation[:150]}...")
 
-        context = rag_store.retrieve(child_explanation, top_k=5)
-        print(f"[TEACHBACK] Retrieved context: {len(context.split())} words")
-        print(f"[TEACHBACK] Context preview: {context[:150].replace(chr(10), ' ')}...")
+        context = rag_store.retrieve(child_explanation, top_k=7)
+        print(f"[TEACHBACK] Context: {len(context.split())} words")
 
         result = self._call(
             TEACHBACK_SYSTEM_PROMPT,
             f"DOCUMENT EXCERPTS:\n{context}\n\nWHAT THE CHILD SAID:\n{child_explanation}"
         )
-        print(f"[TEACHBACK] Feedback: {result[:150].replace(chr(10), ' ')}...")
+        print(f"[TEACHBACK] Feedback: {result[:150]}...")
         print("========== END TEACHBACK ==========\n")
         return result
+
 
     def compare_answers(self, student_answer: str, correct_answer: str):
 

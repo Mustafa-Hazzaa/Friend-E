@@ -293,28 +293,18 @@ def teachback_run():
 
     try:
         store = _get_or_build_rag(filename, path)
+
         speak("Ooooh okay! Tell me everything you learned. I am listening!")
 
-        # 90s: child explains a full topic — could be a long monologue
         explanation = listen(timeout=90.0)
         if not explanation:
             speak("Hmm I did not hear anything. Try again!")
             return jsonify({"error": "No explanation heard"}), 400
 
-        print(f"[TEACHBACK] Heard explanation: '{explanation[:80]}...'")
+        print(f"[TEACHBACK] Explanation: '{explanation[:80]}...'")
+
         feedback = _ai.answer_teachback(store, explanation)
         speak(feedback)
-
-        # 45s for the follow-up: child responds to feedback, can be detailed
-        follow_up = listen(timeout=45.0)
-        if follow_up:
-            print(f"[TEACHBACK] Follow-up: '{follow_up[:80]}'")
-            final = _ai.answer_question(
-                store,
-                f"The child responded to your follow-up with: {follow_up}\n"
-                f"React warmly and briefly as Wall-E."
-            )
-            speak(final)
 
         return jsonify({"explanation": explanation, "feedback": feedback})
 

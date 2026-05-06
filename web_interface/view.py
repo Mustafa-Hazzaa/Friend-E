@@ -1,12 +1,14 @@
-from flask import Blueprint, render_template, url_for, redirect, request ,jsonify
+from flask import Blueprint, render_template, url_for, redirect, request, jsonify, current_app,session
 from flask_login import login_required, current_user, login_manager
 from werkzeug.security import check_password_hash
 view = Blueprint('view', __name__)
+   # or however you store it
 
 @view.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template("control.html", active_page="dashboard",user=current_user)
+    PI_IP = current_app.config["PI_IP"]
+    return render_template("control.html", active_page="dashboard",user=current_user,pi_stream=f"http://{PI_IP}:8080/stream.mjpg")
 
 @view.route("/health")
 def good():
@@ -49,15 +51,16 @@ def account():
 
 @view.route("/monitor")
 def monitor():
-    return render_template("monitor.html" ,active_page="monitor",user=current_user)
-
+    return render_template("monitor.html", active_page="monitor", user=current_user, parent_active=session.get('parent_active', False))
 
 @view.route("/check-monitor-password", methods=["POST"])
+@login_required
 def check_monitor_password():
     data = request.get_json()
-    password = data.get("password")
+    password = data.get("password", "")
 
-    if check_password_hash(current_user.password_hash,password):
+    if check_password_hash(current_user.password_hash, password):
+        session['parent_active'] = True
         return jsonify(success=True)
 
     return jsonify(success=False)

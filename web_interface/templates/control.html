@@ -163,4 +163,40 @@ function setMode(isAuto) {
   document.querySelectorAll('.s-range,.s-pill').forEach(el => el.disabled = isAuto);
 }
 </script>
+
+<script>
+const STREAM_URL = "{{ pi_stream }}";
+</script>
+
+<script>
+function startStream() {
+    const img = document.getElementById("stream");
+
+    if (!STREAM_URL) {
+        console.error("STREAM_URL missing");
+        return;
+    }
+
+    console.log("Connecting stream:", STREAM_URL);
+
+    img.src = STREAM_URL;
+
+    img.onerror = () => {
+        console.warn("Stream failed, falling back");
+        img.src = "{{ url_for('static', filename='streamimage.jpg') }}";
+    };
+}
+
+window.addEventListener("DOMContentLoaded", startStream);
+</script>
+
+<!-- ADDED: Speak button click handler -->
+<script>
+document.getElementById('tts_btn').addEventListener('click', function() {
+    const text = document.getElementById('tts_text').value;
+    if (text.trim() !== "") {
+        playTTS(text);
+    }
+});
+</script>
 {% endblock %}

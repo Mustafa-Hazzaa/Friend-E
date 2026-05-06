@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+{% block title %}Parent Access — Wall·E{% endblock %}
+
+{% block content %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+
+  body { overflow: hidden; }
+
+  .pl-scene {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+
+  .pl-bg {
+    position: absolute;
+    inset: 0;
+    background-image: url("{{ url_for('static', filename='background.jpg') }}");
+    background-size: cover;
+    background-position: center 30%;
+    background-attachment: fixed;
+    animation: bgDrift 30s ease-in-out infinite alternate;
+  }
+
+  @media (max-width: 680px) {
+    .pl-bg {
+      background-image: url("{{ url_for('static', filename='mobile_background.jpg') }}");
+      background-position: center;
+    }
+  }
+
+  @keyframes bgDrift {
+    from { transform: scale(1.04) translateX(0px); }
+    to   { transform: scale(1.08) translateX(-12px); }
+  }
+
+  .pl-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,rgba(10,8,30,0.75) 0%,rgba(13,17,23,0.55) 50%,rgba(10,8,30,0.82) 100%);
+  }
+
+  .pl-stars { position: absolute; inset: 0; pointer-events: none; }
+
+  .pl-star {
+    position: absolute;
+    width: 2px; height: 2px;
+    background: white; border-radius: 50%;
+    animation: twinkle var(--d,3s) ease-in-out infinite var(--delay,0s) alternate;
+    opacity: var(--o,0.6);
+  }
+
+  @keyframes twinkle {
+    from { opacity: var(--o,0.6); transform: scale(1); }
+    to   { opacity: calc(var(--o,0.6)*0.15); transform: scale(0.5); }
+  }
+
+  .pl-content {
+    position: relative; z-index: 10;
+    display: flex; flex-direction: column; align-items: center;
+    animation: fadeUp 0.85s cubic-bezier(0.16,1,0.3,1) both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(32px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .pl-logo-wrap {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 2rem;
+    animation: fadeUp 0.85s cubic-bezier(0.16,1,0.3,1) 0.08s both;
+  }
+
+  .pl-logo-img { height: 36px; width: auto; filter: brightness(1.1); }
+  .pl-logo-sep { width: 1px; height: 22px; background: rgba(255,255,255,0.2); }
+
+  .pl-logo-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px; font-weight: 500;
+    letter-spacing: 3px; text-transform: uppercase;
+    color: rgba(255,255,255,0.38);
+  }
+  .pl-logo-label span { color: #F4D03F; }
+
+  .pl-card {
+    width: 380px;
+    background: rgba(22,27,34,0.72);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 2.5rem 2.25rem 2rem;
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    animation: fadeUp 0.85s cubic-bezier(0.16,1,0.3,1) 0.16s both;
+  }
+
+  @media (max-width: 440px) {
+    .pl-card { width: calc(100vw - 32px); padding: 2rem 1.5rem 1.75rem; }
+  }
+
+  .pl-icon-wrap {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: rgba(244,211,63,0.12);
+    border: 1px solid rgba(244,211,63,0.25);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.4rem;
+  }
+
+  .pl-icon-wrap svg { width: 22px; height: 22px; stroke: #F4D03F; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  .pl-heading { font-family: 'Syne', sans-serif; font-size: 21px; font-weight: 600; color: #e6edf3; text-align: center; margin: 0 0 0.45rem; letter-spacing: -0.2px; }
+  .pl-sub { font-family: 'Nunito', sans-serif; font-size: 14px; font-weight: 400; color: #8b949e; text-align: center; margin: 0 0 1.75rem; line-height: 1.55; }
+
+  .pl-field-wrap { position: relative; margin-bottom: 0.85rem; }
+
+  .pl-field-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); pointer-events: none; display: flex; align-items: center; }
+  .pl-field-icon svg { width: 15px; height: 15px; stroke: #8b949e; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  .pl-input {
+    width: 100%; box-sizing: border-box;
+    background: rgba(13,17,23,0.6);
+    border: 1px solid #2d3748; border-radius: 10px;
+    padding: 12px 42px 12px 40px;
+    font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 400;
+    color: #e6edf3; outline: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .pl-input::placeholder { color: #4a5568; }
+  .pl-input:focus { border-color: rgba(244,211,63,0.45); background: rgba(13,17,23,0.8); }
+
+  .pl-eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; color: #8b949e; transition: color 0.2s; }
+  .pl-eye:hover { color: #e6edf3; }
+  .pl-eye svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  .pl-btn {
+    width: 100%; padding: 12px; border: none; border-radius: 10px;
+    background: #F4D03F; color: #0d1117;
+    font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 800;
+    cursor: pointer; transition: background 0.2s, transform 0.15s;
+    margin-top: 0.35rem;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+  }
+  .pl-btn:hover { background: #d4b03a; }
+  .pl-btn:active { transform: scale(0.985); }
+  .pl-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+  .pl-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.2s; flex-shrink: 0; }
+  .pl-btn:hover:not(:disabled) svg { transform: translateX(3px); }
+
+  .pl-err { font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700; color: #fc8181; text-align: center; margin-top: 0.9rem; min-height: 18px; opacity: 0; transform: translateY(-4px); transition: opacity 0.25s, transform 0.25s; }
+  .pl-err.show { opacity: 1; transform: translateY(0); }
+
+  .pl-divider { display: flex; align-items: center; gap: 10px; margin: 1.5rem 0 0; }
+  .pl-divider-line { flex: 1; height: 1px; background: #2d3748; }
+  .pl-divider-txt { font-family: 'Nunito', sans-serif; font-size: 11px; font-weight: 700; color: #4a5568; letter-spacing: 2px; text-transform: uppercase; }
+
+  .pl-footer-links { display: flex; align-items: center; gap: 6px; margin-top: 0.85rem; justify-content: center; }
+  .pl-footer-link { font-family: 'Nunito', sans-serif; font-size: 12px; font-weight: 700; color: #8b949e; text-decoration: none; padding: 4px 8px; border-radius: 6px; transition: color 0.2s, background 0.2s; }
+  .pl-footer-link:hover { color: #e6edf3; background: rgba(255,255,255,0.05); }
+  .pl-footer-sep { color: #2d3748; font-size: 12px; }
+
+  .pl-footer { margin-top: 1.5rem; font-family: 'Nunito', sans-serif; font-size: 11px; color: rgba(139,148,158,0.4); text-align: center; animation: fadeUp 0.85s cubic-bezier(0.16,1,0.3,1) 0.28s both; }
+
+  @keyframes shake {
+    10%,90% { transform: translateX(-2px); }
+    20%,80% { transform: translateX(5px); }
+    30%,50%,70% { transform: translateX(-6px); }
+    40%,60% { transform: translateX(6px); }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<div class="pl-scene">
+  <div class="pl-bg"></div>
+  <div class="pl-overlay"></div>
+  <div class="pl-stars" id="plStars"></div>
+
+  <div class="pl-content">
+    <div class="pl-logo-wrap">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Wall-E Logo" class="pl-logo-img">
+      <div class="pl-logo-sep"></div>
+      <span class="pl-logo-label">Parent <span>Portal</span></span>
+    </div>
+
+    <div class="pl-card" id="plCard">
+      <div class="pl-icon-wrap">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <h1 class="pl-heading">Parent access</h1>
+      <p class="pl-sub">Enter your password to view your child's sessions and learning report.</p>
+
+      <div class="pl-field-wrap">
+        <span class="pl-field-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </span>
+        <input class="pl-input" id="plPass" type="password" placeholder="Password" autocomplete="current-password" autofocus>
+        <button type="button" class="pl-eye" onclick="plToggleEye()" aria-label="Show password">
+          <svg id="plEyeIcon" viewBox="0 0 24 24">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+
+      <button type="button" class="pl-btn" id="plBtn" onclick="plSubmit()">
+        Unlock
+        <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+
+      <div class="pl-err" id="plErr"></div>
+
+      <div class="pl-divider">
+        <div class="pl-divider-line"></div>
+        <span class="pl-divider-txt">Secure</span>
+        <div class="pl-divider-line"></div>
+      </div>
+
+      <div class="pl-footer-links">
+        <a class="pl-footer-link" href="{{ url_for('auth.login') }}">Student login</a>
+        <span class="pl-footer-sep">·</span>
+        <a class="pl-footer-link" href="{{ url_for('view.dashboard') }}">Dashboard</a>
+      </div>
+    </div>
+
+    <div class="pl-footer">
+      Damascus University · Faculty of Informatics Engineering · Robotic Club 2026–2027
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const stars = document.getElementById('plStars');
+  for (let i = 0; i < 90; i++) {
+    const s = document.createElement('div');
+    s.className = 'pl-star';
+    const o = (Math.random() * 0.55 + 0.15).toFixed(2);
+    s.style.cssText = [
+      'left:'+(Math.random()*100).toFixed(1)+'%',
+      'top:'+(Math.random()*100).toFixed(1)+'%',
+      '--o:'+o,
+      '--d:'+(Math.random()*4+2).toFixed(1)+'s',
+      '--delay:-'+(Math.random()*6).toFixed(1)+'s',
+      'width:'+(Math.random()<0.15?3:2)+'px',
+      'height:'+(Math.random()<0.15?3:2)+'px',
+    ].join(';');
+    stars.appendChild(s);
+  }
+})();
+
+document.getElementById('plPass').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') plSubmit();
+});
+
+function plToggleEye() {
+  const inp = document.getElementById('plPass');
+  const icon = document.getElementById('plEyeIcon');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  } else {
+    inp.type = 'password';
+    icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  }
+}
+
+function plSubmit() {
+  const btn = document.getElementById('plBtn');
+  const err = document.getElementById('plErr');
+  const pw  = document.getElementById('plPass').value.trim();
+
+  if (!pw) {
+    err.textContent = 'Please enter your password.';
+    err.classList.add('show');
+    return;
+  }
+
+  err.classList.remove('show');
+  btn.innerHTML = '<svg viewBox="0 0 24 24" style="animation:spin 1s linear infinite;width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;flex-shrink:0;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> Verifying…';
+  btn.disabled = true;
+
+  fetch('/check-monitor-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: pw })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg> Unlocked!';
+      setTimeout(() => { window.location.href = "{{ url_for('view.monitor') }}"; }, 400);
+    } else {
+      err.textContent = 'Incorrect password. Please try again.';
+      err.classList.add('show');
+      const card = document.getElementById('plCard');
+      card.style.animation = 'none';
+      setTimeout(() => { card.style.animation = 'shake 0.4s cubic-bezier(.36,.07,.19,.97) both'; }, 10);
+      btn.innerHTML = 'Unlock <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+      btn.disabled = false;
+      document.getElementById('plPass').select();
+    }
+  })
+  .catch(() => {
+    err.textContent = 'Cannot reach server. Is Wall·E online?';
+    err.classList.add('show');
+    btn.innerHTML = 'Unlock <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+    btn.disabled = false;
+  });
+}
+</script>
+{% endblock %}

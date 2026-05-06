@@ -8,11 +8,11 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 # ── Security ──────────────────────────────────────────────────────────────────
 SECRET_KEY    = b'\xccCL\xb2&S\xcb\xfa&\x0e\x90\x03\xe7h5\x0f\x1e\r\xef\xd6 2\x05&'
-LOGIN_PASSWORD = "walle"
 
 # ── Server ────────────────────────────────────────────────────────────────────
 APP_PORT  = 5000
 APP_DEBUG = False
+PI_IP = "192.168.43.221"
 PI_URL = "http://192.168.43.221:5000"
 
 # ── Hardware ──────────────────────────────────────────────────────────────────

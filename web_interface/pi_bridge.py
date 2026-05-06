@@ -16,6 +16,9 @@ from flask import current_app
 
 _MIN_LISTEN_TIMEOUT = 20.0
 _POLL_INTERVAL      = 0.5   # seconds between /voice-status polls
+_WHISPER_HEADROOM   = 90    # extra seconds beyond speech timeout for Whisper inference
+                            # Pi 4 transcribes ~1s of audio per second, so a 52s
+                            # recording needs up to 52s of inference time alone.
 
 
 def speak(text: str, lang: str = "en") -> bool:
@@ -84,9 +87,12 @@ def listen(timeout: float = 90.0, language: str = None) -> str:
         return ""
 
     # ── 2. Poll until done or timeout ─────────────────────
-    deadline = time.monotonic() + safe_timeout
+    # Total deadline = speech timeout + Whisper inference headroom.
+    # On Pi 4, Whisper processes ~1x realtime so a 52s recording needs
+    # ~52s of inference on top of the time spent listening.
+    poll_deadline = time.monotonic() + safe_timeout + _WHISPER_HEADROOM
 
-    while time.monotonic() < deadline:
+    while time.monotonic() < poll_deadline:
         time.sleep(_POLL_INTERVAL)
 
         try:
@@ -115,7 +121,9 @@ def listen(timeout: float = 90.0, language: str = None) -> str:
             # Network hiccup — keep trying until deadline
 
     current_app.logger.error(
-        f"[Pi] listen() timed out after {safe_timeout}s (session {session_id})"
+        f"[Pi] listen() timed out after {safe_timeout + _WHISPER_HEADROOM}s "
+        f"(speech={safe_timeout}s + whisper headroom={_WHISPER_HEADROOM}s, "
+        f"session {session_id})"
     )
     return ""
 

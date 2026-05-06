@@ -65,7 +65,7 @@ function sendSettings(type, value) {
 							$('#conn-streamer').html('End Stream');
 							$('#conn-streamer').removeClass('btn-outline-info');
 							$('#conn-streamer').addClass('btn-outline-danger');
-							$("#stream").attr("src","http:/" + "/" + window.location.hostname + ":8080/stream.mjpg");
+							$("#stream").attr("src","http:/" + "/" + "192.168.43.221" + ":8080/stream.mjpg");
 						} else if(data.streamer == "Offline"){
 							$('#conn-streamer').html('Reactivate');
 							$('#conn-streamer').addClass('btn-outline-info');
@@ -894,7 +894,9 @@ window.onload = function () {
 	});
 
 	// Load blockly
-	init_blocks();
+	if (typeof init_blocks === "function") {
+    init_blocks();
+}
 
 
 }

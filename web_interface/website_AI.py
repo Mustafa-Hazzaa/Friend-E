@@ -59,10 +59,11 @@ Keep every important idea. Write in order. Be thorough.
 QUIZ_GENERATION_SYSTEM_PROMPT = BASE_PERSONA + """
 You are generating quiz questions for children aged 10–12.
 
-You MUST:
-- Stay in Wall-E personality
-- Keep excitement and curiosity
-- Use simple language
+CRITICAL RULE (MUST FOLLOW):
+- You MUST generate EXACTLY the number of questions requested.
+- If the user asks for 5, you MUST return 5.
+- Not more. Not less.
+- If you generate the wrong number, your answer is WRONG.
 
 STRICT OUTPUT RULE:
 Return ONLY valid JSON.
@@ -230,6 +231,23 @@ OUTPUT FORMAT (STRICT JSON ONLY):
   "concerns": ["..."],
   "recommendations": ["..."]
 }
+
+
+IMPORTANT OUTPUT VALIDATION RULES:
+
+- You MUST always return valid JSON.
+- "concerns" MUST ALWAYS be an array of strings. If none, return [].
+- "recommendations" MUST ALWAYS be an array of strings. If none, return [].
+
+- NEVER return a single string for concerns or recommendations.
+- NEVER return null.
+- NEVER omit any field.
+
+If no data exists, return empty arrays like:
+"concerns": [],
+"recommendations": []
+
+
 """
 
 
@@ -370,7 +388,7 @@ class AIPlanner:
         Every hard word needs a fun simple explanation.
         Make the child feel like they are on an adventure discovering something amazing.
         No markdown. Just talking. Start with Ooooh! right now.
-        Keep it short — MAXIMUM 10 sentences total. Pick the most exciting ideas only.
+        Keep it short — MAXIMUM 10 sentences total DONT DO MORE BUT MAKE SURE YOU COVER EVERYTHING IN THIS 10 sentences. Pick the most exciting ideas only.
         But ALWAYS mention the real names of the important concepts and explain each one in simple words right after.
         A child should finish listening and know what these things are actually called.
         {clean}""",
@@ -378,45 +396,46 @@ class AIPlanner:
         print("========== END SUMMARIZATION ==========\n")
         return result
 
-
     def generate_quiz(self, rag_store: RAGStore, count: int, difficulty: str) -> list:
         print(f"\n========== START QUIZ GENERATION ==========")
-        print(f"[QUIZ] count={count} difficulty={difficulty}")
-        print(f"[QUIZ] RAG store has {len(rag_store.chunks)} chunks")
-
         chunks = rag_store.chunks
 
-        if len(chunks) <= 6:
-            print("[QUIZ] Small store — using full text")
-            pdf_text = rag_store.get_full_text()
-        else:
-            step = len(chunks) // 6
-            sampled = [chunks[i] for i in range(0, len(chunks), step)][:6]
-            pdf_text = "\n\n---\n\n".join(sampled)
-            print(f"[QUIZ] Sampled 6 chunks (step={step}) — {len(pdf_text.split())} words")
-
-        print(f"[QUIZ] Final input text: {len(pdf_text.split())} words")
-
         if difficulty == "easy":
-            difficulty_rule = "Ask very simple recall questions. One fact per question."
+            difficulty_rule = "Ask very simple recall questions."
         elif difficulty == "medium":
-            difficulty_rule = "Ask understanding questions that require thinking."
+            difficulty_rule = "Ask understanding questions."
         else:
-            difficulty_rule = "Ask why/how reasoning questions that require explanation."
+            difficulty_rule = "Ask why/how reasoning questions."
 
-        user_prompt = (
-            f"Based on the following text, generate EXACTLY {count} quiz questions.\n"
-            f"Difficulty: {difficulty}\n"
-            f"{difficulty_rule}\n\n"
-            "Rules:\n"
-            "- Use ONLY information from the text\n"
-            "- Stay in Wall-E personality\n"
-            "- Keep language simple for children\n\n"
-            f"TEXT:\n{pdf_text}\n"
-        )
+        all_questions = []
 
-        for attempt in range(2):
-            print(f"\n[QUIZ] Attempt {attempt + 1}/2...")
+        # 🔹 STEP 1: generate per chunk
+        BATCH_SIZE = 2
+
+        for i in range(0, len(chunks), BATCH_SIZE):
+            batch = chunks[i:i + BATCH_SIZE]
+            combined_text = "\n\n---\n\n".join(batch)
+            print(f"[QUIZ] Chunk {i + 1}/{len(chunks)}")
+            user_prompt = f"""
+            Generate {2 * len(batch)} quiz questions from this text.
+
+            Rules:
+            - Use ONLY this text
+            - Keep language simple for children
+            - {difficulty_rule}
+
+            Return JSON:
+            {{
+              "questions": [
+                {{"question": "...", "answer": "..."}}
+              ]
+            }}
+
+            TEXT:
+            {combined_text}
+            """
+
+
             try:
                 response = self.client.chat(
                     model=self.model_name,
@@ -426,56 +445,54 @@ class AIPlanner:
                     ],
                     think=False,
                     format="json",
-                    options={"temperature": 0.3, "num_ctx": 4096}
+                    options={"temperature": 0}
                 )
 
                 raw = response["message"]["content"].strip()
-                print(f"[QUIZ] Raw response length: {len(raw)} chars")
-                print(f"[QUIZ] Raw preview: {raw[:200]}")
-
                 raw = re.sub(r"```json|```", "", raw).strip()
 
-                match = re.search(r'\{.*\}', raw, re.DOTALL)
-                if not match:
-                    raise ValueError("No JSON object found in response")
+                parsed = json.loads(raw)
 
-                print("[QUIZ] JSON object found — parsing...")
-                try:
-                    parsed = json.loads(match.group())
-                except Exception as e:
-                    print(f"[QUIZ] JSON parse error: {e}")
-                    print(f"[QUIZ] Raw that failed: {raw[:300]}")
-                    raise ValueError("Invalid JSON from model")
+                if "error" in parsed:
+                    print("[QUIZ] Model error — skipping chunk")
+                    continue
 
-                questions = parsed.get("questions")
-                print(f"[QUIZ] 'questions' key found: {questions is not None}")
-
-                if not questions:
-                    for key, value in parsed.items():
-                        if isinstance(value, list):
-                            questions = value
-                            print(f"[QUIZ] Fallback key used: '{key}' ({len(value)} items)")
-                            break
-
-                if not questions or len(questions) == 0:
-                    print(f"[QUIZ] No questions in parsed output: {parsed}")
-                    raise ValueError("No questions generated")
-
-                if len(questions) != count:
-                    print(f"[QUIZ] Count mismatch — expected {count}, got {len(questions)}")
-                    raise ValueError("Incorrect number of questions")
-
-                print(f"[QUIZ] Success — {len(questions)} questions generated")
-                for q in questions:
-                    print(f"[QUIZ]   Q{q.get('id','?')}: {str(q.get('question',''))[:80]}")
-                print("========== END QUIZ GENERATION ==========\n")
-                return questions
+                qs = parsed.get("questions", [])
+                all_questions.extend(qs)
 
             except Exception as e:
-                print(f"[QUIZ] Attempt {attempt + 1} failed: {e}")
-                if attempt == 1:
-                    print("[QUIZ] Both attempts failed — raising error")
-                    raise ValueError(f"Quiz generation failed: {str(e)}")
+                print(f"[QUIZ] Chunk failed: {e}")
+                continue
+
+        print(f"[QUIZ] Total generated: {len(all_questions)}")
+
+        if not all_questions:
+            raise ValueError("No questions generated")
+
+        unique = []
+        seen = set()
+
+        for q in all_questions:
+            key = q.get("question", "").lower().strip()
+            if key and key not in seen:
+                seen.add(key)
+                unique.append(q)
+
+        all_questions = unique
+
+        print(f"[QUIZ] After deduplication: {len(all_questions)}")
+
+        random.shuffle(all_questions)
+
+        final_questions = all_questions[:count]
+
+        for i, q in enumerate(final_questions, 1):
+            q["id"] = i
+
+        print(f"[QUIZ] Final: {len(final_questions)} questions")
+        print("========== END QUIZ GENERATION ==========\n")
+
+        return final_questions
 
 
     def answer_question(self, rag_store: RAGStore, question: str) -> str:

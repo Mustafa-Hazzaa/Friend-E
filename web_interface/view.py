@@ -3,6 +3,14 @@ from flask_login import login_required, current_user, login_manager
 from werkzeug.security import check_password_hash
 view = Blueprint('view', __name__)
 
+@view.route("/dashboard")
+@login_required
+def dashboard():
+    return render_template("control.html", active_page="dashboard",user=current_user)
+
+@view.route("/health")
+def good():
+    return "good"
 
 @view.route("/")
 @view.route("/home")
@@ -11,12 +19,6 @@ def home():
         return redirect(url_for("view.dashboard"))
 
     return render_template("home.html", user=current_user)
-
-
-@view.route("/dashboard")
-@login_required
-def dashboard():
-    return render_template("control.html", active_page="dashboard",user=current_user)
 
 @view.route("/about")
 def about():

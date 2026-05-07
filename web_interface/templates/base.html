@@ -248,11 +248,6 @@
       </a>
 
 
-      <a class="nav-link {% if active_page == 'settings' %}active{% endif %}"
-         href="{{ url_for('view.settings') }}">
-        Settings
-      </a>
-
         <a class="nav-link {% if active_page == 'monitor' %}active{% endif %}"
          href="{{ url_for('view.monitor') }}">
         Overview
@@ -266,7 +261,12 @@
 <!--        <span class="dot"></span>-->
 <!--        Online-->
 <!--      </div>-->
-
+      {% if user.is_authenticated %}
+      <a class="nav-link {% if active_page == 'settings' %}active{% endif %}"
+         href="{{ url_for('view.settings') }}" style="font-size: 28px">
+        ⚙️
+      </a>
+        {%endif%}
         <button class="avatar">
           {% if not user.is_authenticated %}
           <a href="{{ url_for('auth.login') }}">

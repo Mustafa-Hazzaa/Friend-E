@@ -1,2 +1,312 @@
 {% extends "base.html" %}
-{% block title %}setting{% endblock %}
+
+{% block title %}Settings — AI Wall-E{% endblock %}
+
+{% block content %}
+
+<style>
+  .settings-page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 20px 0 60px;
+  }
+
+  .settings-header {
+    margin-bottom: 32px;
+  }
+
+  .settings-header h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 28px;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+
+  .settings-header p {
+    color: var(--muted);
+    font-size: 14px;
+    margin-top: 6px;
+  }
+
+  .settings-section {
+    background: rgba(22, 27, 34, 0.85);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 24px;
+    backdrop-filter: blur(8px);
+  }
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px;
+    gap: 20px;
+  }
+
+  .setting-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .setting-label strong {
+    display: block;
+    font-size: 15px;
+    color: var(--text);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .setting-label span {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .setting-control {
+    flex-shrink: 0;
+  }
+
+  .lang-toggle {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #0d1117;
+  }
+
+  .lang-btn {
+    padding: 9px 20px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .lang-btn.active {
+    background: var(--accent);
+    color: #0d1117;
+  }
+
+  .lang-btn:hover:not(.active) {
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+  }
+
+  /* Volume */
+  .volume-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .vol-icon {
+    font-size: 20px;
+    width: 24px;
+    text-align: center;
+  }
+
+  .vol-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    min-width: 36px;
+    text-align: right;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 160px;
+    height: 4px;
+    border-radius: 4px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid #0d1117;
+    box-shadow: 0 0 6px rgba(244, 208, 63, 0.4);
+    transition: box-shadow 0.2s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 14px rgba(244, 208, 63, 0.65);
+  }
+
+  .toast-bar {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1c2533;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 999;
+    opacity: 0;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    white-space: nowrap;
+  }
+
+  .toast-bar.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  @media (max-width: 600px) {
+    .setting-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    input[type="range"] { width: 100%; }
+
+    .volume-wrap {
+      width: 100%;
+    }
+
+    .volume-wrap input[type="range"] { flex: 1; }
+
+    .lang-btn { padding: 9px 14px; }
+  }
+</style>
+
+<div class="settings-page">
+
+  <div class="settings-header">
+    <h1>⚙ Settings</h1>
+    <p>Configure Wall-E's language and audio output.</p>
+  </div>
+
+  <!-- Language -->
+  <div class="settings-section">
+    <div class="section-title">
+      <span>🌐</span> Language
+    </div>
+    <div class="setting-row">
+      <div class="setting-label">
+        <strong>Interface Language</strong>
+        <span>Wall-E will speak and respond in the selected language.</span>
+      </div>
+      <div class="setting-control">
+        <div class="lang-toggle">
+          <button class="lang-btn active" id="lang-en" onclick="setLanguage('en')">🇬🇧 English</button>
+          <button class="lang-btn" id="lang-ar" onclick="setLanguage('ar')">🇸🇦 Arabic</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Volume -->
+  <div class="settings-section">
+    <div class="section-title">
+      <span>🔊</span> Audio
+    </div>
+    <div class="setting-row">
+      <div class="setting-label">
+        <strong>Speaker Volume</strong>
+        <span>Controls Wall-E's speech output volume.</span>
+      </div>
+      <div class="setting-control">
+        <div class="volume-wrap">
+          <span class="vol-icon" id="vol-icon">🔊</span>
+          <input type="range" id="volume-slider" min="0" max="10" step="1" value="8"
+                 oninput="onVolumeChange(this.value)">
+          <span class="vol-value" id="vol-display">80%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast-bar" id="toast">
+  <span id="toast-icon">✅</span>
+  <span id="toast-msg">Saved</span>
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+  /* ── Language ── */
+  function setLanguage(lang) {
+    document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+    document.getElementById('lang-ar').classList.toggle('active', lang === 'ar');
+
+    $.ajax({
+      url: '/settings',
+      type: 'POST',
+      data: { type: 'language', value: lang },
+      dataType: 'json',
+      success: function(data) {
+        showToast(data.status === 'OK' ? '✅' : '❌',
+                  data.status === 'OK' ? 'Language updated' : (data.msg || 'Error'));
+      },
+      error: function() { showToast('❌', 'Could not reach server'); }
+    });
+  }
+
+  function onVolumeChange(val) {
+    document.getElementById('vol-display').textContent = (val * 10) + '%';
+    const icon = document.getElementById('vol-icon');
+    if      (val == 0) icon.textContent = '🔇';
+    else if (val <= 3) icon.textContent = '🔈';
+    else if (val <= 7) icon.textContent = '🔉';
+    else               icon.textContent = '🔊';
+
+    sendSettings('volume', val);
+  }
+
+  let toastTimer = null;
+  function showToast(icon, msg) {
+    document.getElementById('toast-icon').textContent = icon;
+    document.getElementById('toast-msg').textContent  = msg;
+    const el = document.getElementById('toast');
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  /* ── Init ── */
+  document.addEventListener('DOMContentLoaded', function() {
+    const v = typeof serverVolume !== 'undefined' ? serverVolume : 8;
+    document.getElementById('volume-slider').value = v;
+    onVolumeChange(v);
+  });
+</script>
+{% endblock %}

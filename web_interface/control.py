@@ -39,7 +39,7 @@ def servoControl():
     try:
         requests.post(
             current_app.config["PI_URL"].rstrip("/") + "/servoControl",
-            data={"servo": code, "value": value},   # form data
+            data={"servo": code, "value": value},
             timeout=0.5
         )
         return jsonify({'status': 'OK'})

@@ -271,7 +271,7 @@
     $.ajax({
       url: '/settings',
       type: 'POST',
-      data: { type: 'language', value: lang },
+      data: { type: 'settings', value: lang },
       dataType: 'json',
       success: function(data) {
         showToast(data.status === 'OK' ? '✅' : '❌',

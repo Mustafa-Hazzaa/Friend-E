@@ -1,3 +1,4 @@
+import requests
 from flask import Blueprint, render_template, url_for, redirect, request, jsonify, current_app,session
 from flask_login import login_required, current_user, login_manager
 from werkzeug.security import check_password_hash
@@ -31,14 +32,32 @@ def about():
 def pdf_page():
     return render_template("pdf.html", active_page="pdf",user=current_user)
 
-@view.route("/Games")
-def Games():
-    return render_template("Games.html", active_page="Games",user=current_user)
-
 @view.route("/settings")
 @login_required
 def settings():
     return render_template("settings.html", active_page="settings",user=current_user)
+
+@view.route("/settings", methods=["POST"])
+@login_required
+def settings_api():
+
+    try:
+        setting_type = request.form.get("type")
+        val = request.form.get("val")
+
+        PI_IP = current_app.config["PI_IP"]
+        PI_URL = f"http://{PI_IP}:5000/settings"
+
+        r = requests.post(PI_URL, data={
+            "type": setting_type,
+            "val": val
+        })
+
+        return jsonify(r.json())
+
+    except Exception as e:
+        return jsonify({"status": "Error", "msg": str(e)})
+
 @view.route("/programming")
 @login_required
 def programming():

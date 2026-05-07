@@ -11,9 +11,6 @@ db = SQLAlchemy()
 DB_NAME = "database.db"
 
 
-
-
-
 def create_app():
     app = Flask(__name__)
     app.config.from_pyfile(os.path.join(os.path.dirname(__file__), '..', 'config.py'))
@@ -28,9 +25,11 @@ def create_app():
     from web_interface.pdf import pdf
     from web_interface.control import control
     from web_interface.monitor import monitor_bp
+    # from web_interface.history import history_bp
     # from web_interface.settings import settings
 
     app.register_blueprint(monitor_bp, url_prefix="/")
+    # app.register_blueprint(history_bp,url_prefix="/")
     app.register_blueprint(auth, url_prefix='/auth')
     app.register_blueprint(view, url_prefix='/')
     app.register_blueprint(pdf, url_prefix='/pdf')

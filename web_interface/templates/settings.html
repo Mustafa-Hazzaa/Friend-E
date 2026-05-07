@@ -263,50 +263,133 @@
 
 {% block scripts %}
 <script>
-  /* ── Language ── */
+  /* ───────── LANGUAGE ───────── */
+
   function setLanguage(lang) {
-    document.getElementById('lang-en').classList.toggle('active', lang === 'en');
-    document.getElementById('lang-ar').classList.toggle('active', lang === 'ar');
+
+    document.getElementById('lang-en')
+      .classList.toggle('active', lang === 'en');
+
+    document.getElementById('lang-ar')
+      .classList.toggle('active', lang === 'ar');
 
     $.ajax({
       url: '/settings',
       type: 'POST',
-      data: { type: 'settings', value: lang },
-      dataType: 'json',
-      success: function(data) {
-        showToast(data.status === 'OK' ? '✅' : '❌',
-                  data.status === 'OK' ? 'Language updated' : (data.msg || 'Error'));
+      data: {
+        type: 'language',
+        val: lang
       },
-      error: function() { showToast('❌', 'Could not reach server'); }
+      dataType: 'json',
+
+      success: function(data) {
+
+        showToast(
+          data.status === 'OK' ? '✅' : '❌',
+          data.status === 'OK'
+            ? 'Language updated'
+            : (data.msg || 'Error')
+        );
+      },
+
+      error: function() {
+        showToast('❌', 'Could not reach server');
+      }
     });
   }
 
+
+  /* ───────── VOLUME ───────── */
+
   function onVolumeChange(val) {
-    document.getElementById('vol-display').textContent = (val * 10) + '%';
+
+    document.getElementById('vol-display').textContent =
+      (val * 10) + '%';
+
     const icon = document.getElementById('vol-icon');
-    if      (val == 0) icon.textContent = '🔇';
-    else if (val <= 3) icon.textContent = '🔈';
-    else if (val <= 7) icon.textContent = '🔉';
-    else               icon.textContent = '🔊';
+
+    if (val == 0)
+      icon.textContent = '🔇';
+
+    else if (val <= 3)
+      icon.textContent = '🔈';
+
+    else if (val <= 7)
+      icon.textContent = '🔉';
+
+    else
+      icon.textContent = '🔊';
 
     sendSettings('volume', val);
   }
 
-  let toastTimer = null;
-  function showToast(icon, msg) {
-    document.getElementById('toast-icon').textContent = icon;
-    document.getElementById('toast-msg').textContent  = msg;
-    const el = document.getElementById('toast');
-    el.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+
+  function sendSettings(type, val) {
+
+    $.ajax({
+      url: '/settings',
+      type: 'POST',
+      data: {
+        type: type,
+        val: val
+      },
+      dataType: 'json',
+
+      success: function(data) {
+
+        if (type === 'volume') {
+
+          showToast(
+            data.status === 'OK' ? '✅' : '❌',
+            data.status === 'OK'
+              ? 'Volume updated'
+              : (data.msg || 'Error')
+          );
+        }
+      },
+
+      error: function() {
+        showToast('❌', 'Could not reach server');
+      }
+    });
   }
 
-  /* ── Init ── */
+
+  /* ───────── TOAST ───────── */
+
+  let toastTimer = null;
+
+  function showToast(icon, msg) {
+
+    document.getElementById('toast-icon').textContent = icon;
+
+    document.getElementById('toast-msg').textContent = msg;
+
+    const el = document.getElementById('toast');
+
+    el.classList.add('show');
+
+    clearTimeout(toastTimer);
+
+    toastTimer = setTimeout(() => {
+      el.classList.remove('show');
+    }, 2500);
+  }
+
+
+  /* ───────── INIT ───────── */
+
   document.addEventListener('DOMContentLoaded', function() {
-    const v = typeof serverVolume !== 'undefined' ? serverVolume : 8;
+
+    const v =
+      typeof serverVolume !== 'undefined'
+        ? serverVolume
+        : 8;
+
     document.getElementById('volume-slider').value = v;
+
     onVolumeChange(v);
   });
+
 </script>
 {% endblock %}

@@ -768,7 +768,7 @@ function sendMovementValues() {
 		
 		// Send data to python app, so that it can be passed on
 		$.ajax({
-			url: "/motor",
+			url: "control/motor",
 			type: "POST",
 			data: {"stickX": moveXY[1], "stickY": -moveXY[3]},
 			dataType: "json",

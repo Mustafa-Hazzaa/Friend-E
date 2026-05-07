@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+{% block title %}AI Monitor — Wall·E{% endblock %}
+
+{% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .pd { font-family: 'Nunito', sans-serif; color: #e6edf3; padding: 0 0 2rem; }
+
+  /* ── cards ── */
+  .card {
+    background: rgba(22,27,34,0.85);
+    border: 1px solid #2d3748;
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .card-hd {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 1rem; padding-bottom: 0.75rem;
+    border-bottom: 1px solid #2d3748;
+  }
+
+  .card-hd-icon { font-size: 16px; }
+  .card-hd-title { font-size: 14px; font-weight: 700; color: #e6edf3; }
+  .card-hd-sub { font-size: 12px; color: #8b949e; margin-left: auto; }
+
+  /* ── layout ── */
+  .pd-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+  .pd-brand { font-size: 16px; font-weight: 800; color: #e6edf3; }
+  .pd-brand span { color: #F4D03F; }
+  .pd-pill { font-size: 11px; padding: 3px 10px; border-radius: 20px; background: rgba(22,27,34,0.85); border: 1px solid #2d3748; color: #8b949e; }
+
+  .pd-tabs { display: flex; gap: 4px; margin-bottom: 1rem; }
+  .pd-tab { font-size: 13px; font-weight: 700; padding: 5px 14px; border-radius: 8px; cursor: pointer; color: #8b949e; border: 1px solid transparent; background: none; font-family: 'Nunito', sans-serif; transition: 0.15s; }
+  .pd-tab:hover { background: rgba(255,255,255,0.05); color: #e6edf3; }
+  .pd-tab.on { background: rgba(244,211,63,0.12); color: #F4D03F; border-color: rgba(244,211,63,0.25); }
+
+  .pd-panel { display: none; }
+  .pd-panel.on { display: block; }
+
+  /* ── sessions tab ── */
+  .pd-row { display: flex; gap: 12px; }
+  .pd-sidebar { width: 220px; flex-shrink: 0; }
+  .pd-main { flex: 1; min-width: 0; }
+
+  .sess-list { display: flex; flex-direction: column; gap: 6px; }
+  .sess-item { padding: 9px 11px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; transition: 0.15s; }
+  .sess-item:hover { background: rgba(255,255,255,0.04); }
+  .sess-item.on { background: rgba(244,211,63,0.08); border-color: rgba(244,211,63,0.3); }
+  .sess-date { font-size: 12px; font-weight: 700; color: #e6edf3; }
+  .sess-meta { font-size: 11px; color: #8b949e; margin-top: 2px; }
+
+  .chat-area { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; padding: 2px; }
+  .bubble { padding: 8px 12px; border-radius: 12px; font-size: 13px; max-width: 78%; line-height: 1.5; }
+  .bubble.u { background: rgba(244,211,63,0.15); color: #F4D03F; align-self: flex-end; border-bottom-right-radius: 4px; border: 1px solid rgba(244,211,63,0.2); }
+  .bubble.a { background: rgba(255,255,255,0.05); color: #e6edf3; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #2d3748; }
+  .bubble-lbl { font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: #8b949e; margin-bottom: 3px; }
+  .bubble.a .bubble-lbl { color: #F4D03F; }
+
+  /* ── report tab ── */
+  .pd-stack { display: flex; flex-direction: column; gap: 12px; }
+  .pd-g2 { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+  .pd-g4 { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+
+  .metric-card { background: rgba(255,255,255,0.04); border: 1px solid #2d3748; border-radius: 10px; padding: 12px 14px; }
+  .metric-lbl { font-size: 11px; color: #8b949e; margin-bottom: 4px; font-weight: 700; }
+  .metric-val { font-size: 26px; font-weight: 800; color: #e6edf3; line-height: 1; margin-bottom: 6px; }
+  .bar-track { height: 3px; background: #2d3748; border-radius: 2px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; background: #F4D03F; transition: width 0.8s ease; }
+
+  .interest-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .interest-row:last-child { margin-bottom: 0; }
+  .interest-name { font-size: 12px; width: 80px; flex-shrink: 0; text-transform: capitalize; color: #8b949e; font-weight: 700; }
+  .interest-track { flex: 1; height: 5px; background: #2d3748; border-radius: 3px; overflow: hidden; }
+  .interest-fill { height: 100%; border-radius: 3px; background: #F4D03F; }
+  .interest-pct { font-size: 11px; color: #8b949e; width: 26px; text-align: right; flex-shrink: 0; }
+
+  .pd-list { list-style: none; }
+  .pd-list li { font-size: 13px; color: #8b949e; padding: 7px 0; border-bottom: 1px solid #2d3748; display: flex; align-items: flex-start; gap: 8px; line-height: 1.45; }
+  .pd-list li:last-child { border-bottom: none; }
+
+  .em-legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; margin-bottom: 10px; }
+  .em-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; margin-top: 2px; }
+
+  .empty { text-align: center; padding: 2rem 1rem; font-size: 13px; color: #8b949e; }
+  .loading { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #8b949e; padding: .75rem 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { display: inline-block; animation: spin 1s linear infinite; }
+
+  .sign-out-btn {
+    font-size: 12px; padding: 5px 12px; cursor: pointer;
+    background: rgba(255,255,255,0.05); border: 1px solid #2d3748;
+    color: #8b949e; border-radius: 8px; font-family: 'Nunito', sans-serif;
+    font-weight: 700; transition: 0.15s;
+  }
+  .sign-out-btn:hover { color: #e6edf3; background: rgba(255,255,255,0.08); }
+
+  @media (max-width: 680px) {
+    .pd-row { flex-direction: column; }
+    .pd-sidebar { width: 100%; }
+    .pd-g2 { grid-template-columns: 1fr; }
+    .pd-g4 { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+
+<div class="pd">
+
+  <div class="pd-top">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="pd-brand">Wall<span>·E</span></span>
+      <span class="pd-pill">🔒 Parent view</span>
+    </div>
+    <button class="sign-out-btn" onclick="pdSignOut()">Sign out</button>
+  </div>
+
+  <div class="pd-tabs">
+    <button class="pd-tab on" onclick="pdTab('sessions',this)">💬 Sessions</button>
+    <button class="pd-tab" onclick="pdTab('report',this)">📊 Learning report</button>
+  </div>
+
+  <!-- SESSIONS TAB -->
+  <div id="panelSessions" class="pd-panel on">
+    <div class="pd-row">
+
+      <div class="pd-sidebar">
+        <div class="card" style="padding:.75rem;">
+          <div class="card-hd" style="margin-bottom:.75rem;padding-bottom:.5rem;">
+            <span class="card-hd-icon">📅</span>
+            <span class="card-hd-title">Sessions</span>
+          </div>
+          <div class="sess-list" id="pdSessions">
+            <div class="loading"><span class="spin">⟳</span> Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pd-main">
+        <div class="card">
+          <div class="card-hd">
+            <span class="card-hd-icon">💬</span>
+            <span class="card-hd-title">Conversation</span>
+            <span class="card-hd-sub" id="sessLabel">Select a session</span>
+          </div>
+          <div id="pdChat" class="chat-area">
+            <div class="empty">Select a session on the left to view the conversation.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- REPORT TAB -->
+  <div id="panelReport" class="pd-panel">
+    <div class="pd-stack">
+
+      <!-- Summary -->
+      <div class="card" id="pdSummaryCard">
+        <div class="card-hd">
+          <span class="card-hd-icon">👤</span>
+          <span class="card-hd-title">Child overview</span>
+        </div>
+        <div id="pdSummaryBody">
+          <div class="loading"><span class="spin">⟳</span> Running AI analysis…</div>
+        </div>
+      </div>
+
+      <!-- Metrics -->
+      <div class="pd-g4" id="pdMetrics" style="display:none;">
+        <div class="metric-card">
+          <div class="metric-lbl">Curiosity</div>
+          <div class="metric-val" id="mCuriosity">—</div>
+          <div class="bar-track"><div class="bar-fill" id="bCuriosity" style="width:0%"></div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-lbl">Engagement</div>
+          <div class="metric-val" id="mEngagement">—</div>
+          <div class="bar-track"><div class="bar-fill" id="bEngagement" style="width:0%"></div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-lbl">Learning depth</div>
+          <div class="metric-val" id="mDepth">—</div>
+          <div class="bar-track"><div class="bar-fill" id="bDepth" style="width:0%"></div></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-lbl">Repetition</div>
+          <div class="metric-val" id="mRepeat">—</div>
+          <div class="bar-track"><div class="bar-fill" id="bRepeat" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="pd-g2" id="pdChartsRow" style="display:none;">
+
+        <div class="card">
+          <div class="card-hd">
+            <span class="card-hd-icon">😊</span>
+            <span class="card-hd-title">Emotional state</span>
+          </div>
+          <div class="em-legend" id="emLegend"></div>
+          <div style="position:relative;height:160px;">
+            <canvas id="pdEmotionChart"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd">
+            <span class="card-hd-icon">⭐</span>
+            <span class="card-hd-title">Interests</span>
+          </div>
+          <div id="pdInterests"><div class="empty" style="padding:.5rem;">No data yet.</div></div>
+        </div>
+
+      </div>
+
+      <!-- Bottom row -->
+      <div class="pd-g2" id="pdBottomRow" style="display:none;">
+
+        <div class="card" id="pdConcernsCard" style="display:none;">
+          <div class="card-hd">
+            <span class="card-hd-icon">⚠️</span>
+            <span class="card-hd-title">Things to watch</span>
+          </div>
+          <ul class="pd-list" id="pdConcernsList"></ul>
+        </div>
+
+        <div class="card" id="pdRecsCard" style="display:none;">
+          <div class="card-hd">
+            <span class="card-hd-icon">💡</span>
+            <span class="card-hd-title">Recommendations</span>
+          </div>
+          <ul class="pd-list" id="pdRecsList"></ul>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+let pdEmChart = null;
+let analysisLoaded = false;
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function pdSignOut() {
+  fetch('/sign-out-monitor', { method: 'POST' })
+    .finally(() => { window.location.href = "{{ url_for('view.monitor') }}"; });
+}
+
+function pdTab(name, btn) {
+  document.querySelectorAll('.pd-tab').forEach(t => t.classList.remove('on'));
+  document.querySelectorAll('.pd-panel').forEach(p => p.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('panel' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('on');
+  if (name === 'report' && !analysisLoaded) { analysisLoaded = true; pdLoadAnalysis(); }
+}
+
+// ── Sessions ──
+function pdLoadSessions() {
+  fetch('/get-sessions')
+  .then(r => r.json())
+  .then(data => {
+    const box = document.getElementById('pdSessions');
+    box.innerHTML = '';
+    if (!data || !data.length) { box.innerHTML = '<div class="empty">No sessions yet.</div>'; return; }
+    data.forEach((s, i) => {
+      const div = document.createElement('div');
+      div.className = 'sess-item' + (i === 0 ? ' on' : '');
+      div.innerHTML = `<div class="sess-date">📅 ${esc(s.session_timestamp || 'Session '+(i+1))}</div><div class="sess-meta">${s.total_messages||0} messages</div>`;
+      div.onclick = () => {
+        document.querySelectorAll('.sess-item').forEach(c => c.classList.remove('on'));
+        div.classList.add('on');
+        pdOpenSession(s.file, s.session_timestamp);
+      };
+      box.appendChild(div);
+      if (i === 0) pdOpenSession(s.file, s.session_timestamp);
+    });
+  })
+  .catch(() => {
+    document.getElementById('pdSessions').innerHTML = '<div class="empty" style="color:#fc8181">Failed to load.</div>';
+  });
+}
+
+function pdOpenSession(file, label) {
+  document.getElementById('sessLabel').textContent = label || '';
+  const chat = document.getElementById('pdChat');
+  chat.innerHTML = '<div class="loading"><span class="spin">⟳</span> Loading…</div>';
+  fetch('/get-session/' + file)
+  .then(r => r.json())
+  .then(s => {
+    chat.innerHTML = '';
+    const msgs = s.messages || [];
+    if (!msgs.length) { chat.innerHTML = '<div class="empty">No messages.</div>'; return; }
+    msgs.forEach(m => {
+      const u = m.role === 'user';
+      const d = document.createElement('div');
+      d.className = 'bubble ' + (u ? 'u' : 'a');
+      d.innerHTML = `<div class="bubble-lbl">${u ? 'Child' : 'Wall·E'}</div>${esc(m.content||'')}`;
+      chat.appendChild(d);
+    });
+    chat.scrollTop = chat.scrollHeight;
+  })
+  .catch(() => { chat.innerHTML = '<div class="empty" style="color:#fc8181">Failed to load session.</div>'; });
+}
+
+// ── Analysis ──
+function pdLoadAnalysis() {
+  fetch('/analyze-child')
+  .then(r => r.json())
+  .then(d => {
+    if (d.error) {
+      document.getElementById('pdSummaryBody').innerHTML = `<p style="font-size:13px;color:#fc8181;">${esc(d.error)}</p>`;
+      return;
+    }
+
+    document.getElementById('pdSummaryBody').innerHTML =
+      `<p style="font-size:13px;color:#8b949e;line-height:1.65;">${esc(d.summary||'No summary available.')}</p>`;
+
+    const bm = d.behavioral_metrics || {};
+    const c  = Math.round(typeof d.curiosity_level === 'number' ? d.curiosity_level : 50);
+    const e  = Math.round(bm.engagement_level || 0);
+    const dep= Math.round(bm.learning_depth   || 0);
+    const rep= Math.round(bm.repetition_level  || 0);
+
+    document.getElementById('mCuriosity').textContent  = c;   document.getElementById('bCuriosity').style.width  = c+'%';
+    document.getElementById('mEngagement').textContent = e;   document.getElementById('bEngagement').style.width = e+'%';
+    document.getElementById('mDepth').textContent      = dep; document.getElementById('bDepth').style.width      = dep+'%';
+    document.getElementById('mRepeat').textContent     = rep; document.getElementById('bRepeat').style.width     = rep+'%';
+    document.getElementById('pdMetrics').style.display = 'grid';
+
+    const em = d.emotion || { positive:60, neutral:25, confused:15 };
+    const emColors  = ['#F4D03F','#8b949e','#fc8181'];
+    const emLabels  = [['Positive',Math.round(em.positive||0)],['Neutral',Math.round(em.neutral||0)],['Confused',Math.round(em.confused||0)]];
+    document.getElementById('emLegend').innerHTML = emLabels.map((l,i) =>
+      `<span style="display:flex;align-items:center;gap:4px;">
+        <span class="em-dot" style="background:${emColors[i]};"></span>
+        <span style="color:#8b949e;">${l[0]} ${l[1]}%</span>
+      </span>`).join('');
+
+    if (pdEmChart) pdEmChart.destroy();
+    pdEmChart = new Chart(document.getElementById('pdEmotionChart'), {
+      type: 'doughnut',
+      data: {
+        labels: emLabels.map(l => l[0]),
+        datasets: [{ data: emLabels.map(l => l[1]), backgroundColor: emColors, borderWidth: 0 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '68%',
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.label}: ${Math.round(c.parsed)}%` } } }
+      }
+    });
+
+    const interests = d.interests || {};
+    const iEntries  = Object.entries(interests);
+    const iBox      = document.getElementById('pdInterests');
+    if (iEntries.length) {
+      iBox.innerHTML = iEntries.map(([k,v]) =>
+        `<div class="interest-row">
+          <div class="interest-name">${esc(k)}</div>
+          <div class="interest-track"><div class="interest-fill" style="width:${Math.round(v)}%"></div></div>
+          <div class="interest-pct">${Math.round(v)}</div>
+        </div>`).join('');
+    }
+
+    document.getElementById('pdChartsRow').style.display = 'grid';
+
+    const concerns = Array.isArray(d.concerns) ? d.concerns : [];
+    const recs     = Array.isArray(d.recommendations) ? d.recommendations : [];
+    let hasBottom  = false;
+
+    if (concerns.length) {
+      document.getElementById('pdConcernsCard').style.display = 'block';
+      document.getElementById('pdConcernsList').innerHTML = concerns.map(c =>
+        `<li>⚠️ ${esc(c)}</li>`).join('');
+      hasBottom = true;
+    }
+    if (recs.length) {
+      document.getElementById('pdRecsCard').style.display = 'block';
+      document.getElementById('pdRecsList').innerHTML = recs.map(r =>
+        `<li>✅ ${esc(r)}</li>`).join('');
+      hasBottom = true;
+    }
+    if (hasBottom) document.getElementById('pdBottomRow').style.display = 'grid';
+  })
+  .catch(() => {
+    document.getElementById('pdSummaryBody').innerHTML =
+      '<p style="font-size:13px;color:#fc8181;">Could not load analysis. Is Wall·E online?</p>';
+  });
+}
+
+// ── Init ──
+pdLoadSessions();
+</script>
+
+{% endblock %}

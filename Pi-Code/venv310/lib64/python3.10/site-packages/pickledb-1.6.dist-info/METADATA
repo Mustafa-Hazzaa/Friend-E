@@ -1,0 +1,41 @@
+Metadata-Version: 2.4
+Name: pickledb
+Version: 1.6
+Summary: An in-memory key-value store using orjson.
+Keywords: pickle,database,json,redis,asyncio,sqlite
+Author-email: Harrison Erd <harrisonerd@gmail.com>
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Classifier: Framework :: AsyncIO
+Classifier: Programming Language :: Python :: 3
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Database
+License-File: LICENSE
+Requires-Dist: orjson
+Requires-Dist: aiofiles
+Requires-Dist: aiosqlite ; extra == "sqlite"
+Project-URL: Homepage, https://patx.github.io/pickledb
+Project-URL: Repository, https://github.com/patx/pickledb
+Provides-Extra: sqlite
+
+[![Logo](https://patx.github.io/pickledb/logo.png)](https://patx.github.io/pickledb)
+
+[pickleDB](https://patx.github.io/pickledb) is a fast, easy to use, in-memory Python 
+key-value store with first class asynchronous support. It is built with the `orjson` 
+module for extremely high performance. It is licensed under the BSD three-clause 
+license. [Check out the website](https://patx.github.io/pickledb) for installation 
+instructions, API docs, advanced examples, benchmarks, and more.
+
+```python
+from pickledb import PickleDB
+
+db = PickleDB("example.json").load()
+db.set("key", "value")
+
+db.get("key")  # return "value"
+```
+
+

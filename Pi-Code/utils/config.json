@@ -1,0 +1,79 @@
+{
+    "language": "en",
+    "audio": {
+        "input_device": 0,
+        "output_device": 1,
+        "_comment": "Set to device index from: python -c 'import sounddevice as sd; print(sd.query_devices())'. null = system default."
+    },
+    "wake_word": {
+        "model": "hey_jarvis",
+        "model_path": "models/hey_jarvis_v0.1.onnx",
+        "threshold": 0.3,
+        "cooldown_seconds": 1.0,
+        "post_detect_delay": 0.5,
+        "sample_rate": 48000,
+        "chunk_size": 1280
+    },
+    "stt": {
+        "model_size": "medium",
+        "language": "en",
+        "device": "cpu",
+        "compute_type": "int8",
+        "sample_rate": 48000,
+        "block_size": 1280,
+        "silence_duration": 1.0,
+        "vad_aggressiveness": 1,
+        "no_speech_threshold": 0.6,
+        "beam_size": 5,
+        "db_threshold": -35
+    },
+    "model": {
+        "_comment": "PI uses provider=remote. LAPTOP uses provider=ollama (or api).",
+        "provider": "remote",
+        "convo_url": "http://192.168.43.163:5001",
+        "site_url": "http://192.168.43.81:5001",
+        "web_url": "http://",
+        "timeout_seconds": 1000,
+        "model_name": "qwen2.5vl:7b",
+        "temperature": 0.7,
+        "max_retries": 3,
+        "ollama_host": "http://127.0.0.1:11434",
+        "api_key": "",
+        "api_url": ""
+    },
+    "translation": {
+        "ar_to_en_model_path": "models/opus-mt-ar-en",
+        "en_to_ar_model_path": "models/opus-mt-en-ar"
+    },
+    "tts": {
+        "edge_voice_ar": "ar-SA-HamedNeural",
+        "piper_ar_model": "models/arabic-emirati-female-model.onnx",
+        "sherpa_en_model": "models/model.onnx",
+        "sherpa_en_tokens": "models/tokens.txt",
+        "sherpa_en_data_dir": "models/espeak-ng-data",
+        "sample_rate": 48000,
+        "effect": true
+    },
+    "robot": {
+        "movement_commands": [
+            "move",
+            "forward",
+            "backward",
+            "left",
+            "right",
+            "turn",
+            "go",
+            "back",
+            "stop",
+            "halt",
+            "pause",
+            "rotate",
+            "spin",
+            "drive",
+            "advance",
+            "retreat"
+        ],
+        "default_distance_cm": 20.0,
+        "default_duration_sec": 1.0
+    }
+}

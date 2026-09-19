@@ -1,4 +1,3 @@
-
 import time
 
 import requests
@@ -6,7 +5,7 @@ from flask import current_app
 
 
 _MIN_LISTEN_TIMEOUT = 20.0
-_POLL_INTERVAL      = 0.5   # seconds between /voice-status polls
+_POLL_INTERVAL      = 0.5
 _WHISPER_HEADROOM   = 120
 
 

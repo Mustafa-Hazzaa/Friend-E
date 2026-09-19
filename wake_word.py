@@ -24,7 +24,6 @@ def listen_for_wake_word(detected_callback):
         frames_per_buffer=CHUNK
     )
 
-    print("[Wall-E] Waiting for wake word...")
 
     last_detected = 0
 
@@ -39,7 +38,6 @@ def listen_for_wake_word(detected_callback):
             now = time.time()
             if score >= THRESHOLD and (now - last_detected) > COOLDOWN:
                 last_detected = now
-                print(f"[Wall-E] Wake word detected! (score={score:.2f})")
                 detected_callback()
 
     finally:

@@ -74,9 +74,6 @@ def update_account():
     if username:
         user.username = username
 
-    # robot_name = request.form.get("robot_name")
-    # if robot_name:
-    #     user.robot_name = robot_name
 
     try:
         db.session.commit()

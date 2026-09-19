@@ -57,10 +57,6 @@ READY_RESPONSES = [
     "Ready to help. What do you need?",
 ]
 
-
-# =============================================================
-# Save PDF session history
-# =============================================================
 def save_pdf_session(session_type, filename, data):
     try:
         history_folder = os.path.join(
@@ -93,9 +89,6 @@ def save_pdf_session(session_type, filename, data):
         print(f"[ERROR] Failed saving history: {e}")
 
 
-# =============================================================
-# Receive history JSON from another laptop
-# =============================================================
 @pdf.route("/upload_history", methods=["POST"])
 def upload_history():
     try:
@@ -134,10 +127,8 @@ def upload_history():
         }), 500
 
 
-# =============================================================
 def _get_or_build_rag(filename: str, path: str) -> RAGStore:
     if filename not in _rag_cache:
-        print(f"[RAG] Building store for: {filename}")
 
         pdf_data = extract_text_from_pdf(path)
 
@@ -146,15 +137,10 @@ def _get_or_build_rag(filename: str, path: str) -> RAGStore:
 
         _rag_cache[filename] = store
 
-        print(f"[RAG] Store ready — {len(store.chunks)} chunks")
-
-    else:
-        print(f"[RAG] Cache hit for: {filename}")
 
     return _rag_cache[filename]
 
 
-# =============================================================
 def _get_path(filename: str):
     if not filename:
         return None, (jsonify({"error": "No filename provided"}), 400)
@@ -170,7 +156,6 @@ def _get_path(filename: str):
     return path, None
 
 
-# =============================================================
 @pdf.route("/upload", methods=["POST"])
 def upload_pdf():
     file = request.files.get("file")
@@ -205,7 +190,6 @@ def upload_pdf():
         }), 500
 
 
-# =============================================================
 @pdf.route("/summarize", methods=["POST"])
 def summarize():
     data = request.json
@@ -235,7 +219,6 @@ def summarize():
         })
 
     except Exception as e:
-        print(f"[ERROR] Summarize failed: {e}")
 
         return jsonify({
             "error": "Summarization failed",
@@ -243,7 +226,6 @@ def summarize():
         }), 500
 
 
-# =============================================================
 @pdf.route("/quiz/generate", methods=["POST"])
 def quiz():
     data = request.get_json(force=True)
@@ -251,8 +233,6 @@ def quiz():
     filename = data.get("filename")
     count = int(data.get("count", 5))
     difficulty = data.get("difficulty", "medium")
-
-    print(f"\n[QUIZ] filename={filename} count={count} difficulty={difficulty}")
 
     path, err = _get_path(filename)
 
@@ -283,15 +263,12 @@ def quiz():
         })
 
     except Exception as e:
-        print(f"[ERROR] Quiz generation failed: {e}")
-
         return jsonify({
             "error": "Quiz generation failed",
             "details": str(e)
         }), 500
 
 
-# =============================================================
 @pdf.route("/quiz/run", methods=["POST"])
 def quiz_run():
     right = 0
@@ -326,7 +303,6 @@ def quiz_run():
 
             child_answer = listen(timeout=30.0)
 
-            print(f"[QUIZ] Child answered: '{child_answer}'")
 
             result = _ai.compare_answers(
                 student_answer=child_answer,
@@ -372,15 +348,12 @@ def quiz_run():
         })
 
     except Exception as e:
-        print(f"[ERROR] Quiz run failed: {e}")
-
         return jsonify({
             "error": "Quiz run failed",
             "details": str(e)
         }), 500
 
 
-# =============================================================
 @pdf.route("/qa", methods=["POST"])
 def qa():
     data = request.get_json(force=True)
@@ -388,7 +361,6 @@ def qa():
     filename = data.get("filename")
     question = data.get("question")
 
-    print(f"\n[QA] filename={filename} question={question}")
 
     if not question:
         return jsonify({
@@ -421,23 +393,18 @@ def qa():
         })
 
     except Exception as e:
-        print(f"[ERROR] QA failed: {e}")
-
         return jsonify({
             "error": "QA failed",
             "details": str(e)
         }), 500
 
 
-# =============================================================
 @pdf.route("/teachback", methods=["POST"])
 def teachback():
     data = request.get_json(force=True)
 
     filename = data.get("filename")
     explanation = data.get("explanation")
-
-    print(f"\n[TEACHBACK] filename={filename}")
 
     if not explanation:
         return jsonify({
@@ -473,15 +440,12 @@ def teachback():
         })
 
     except Exception as e:
-        print(f"[ERROR] Teachback failed: {e}")
-
         return jsonify({
             "error": "Teachback failed",
             "details": str(e)
         }), 500
 
 
-# =============================================================
 @pdf.route("/qa/run", methods=["POST"])
 def qa_run():
     data = request.get_json(force=True)
@@ -507,8 +471,6 @@ def qa_run():
                 "error": "No question heard"
             }), 400
 
-        print(f"[QA] Heard question: '{question}'")
-
         answer = _ai.answer_question(store, question)
 
         speak(answer)
@@ -528,15 +490,12 @@ def qa_run():
         })
 
     except Exception as e:
-        print(f"[ERROR] QA run failed: {e}")
-
         return jsonify({
             "error": "QA run failed",
             "details": str(e)
         }), 500
 
 
-# =============================================================
 @pdf.route("/teachback/run", methods=["POST"])
 def teachback_run():
     data = request.get_json(force=True)
@@ -564,7 +523,6 @@ def teachback_run():
                 "error": "No explanation heard"
             }), 400
 
-        print(f"[TEACHBACK] Explanation: '{explanation[:80]}...'")
 
         feedback = _ai.answer_teachback(
             store,
@@ -588,15 +546,12 @@ def teachback_run():
         })
 
     except Exception as e:
-        print(f"[ERROR] Teachback run failed: {e}")
-
         return jsonify({
             "error": "Teachback run failed",
             "details": str(e)
         }), 500
 
 
-# =============================================================
 @pdf.route("/clear", methods=["POST"])
 def clear_cache():
     data = request.get_json(force=True)
@@ -606,7 +561,6 @@ def clear_cache():
     if filename and filename in _rag_cache:
         del _rag_cache[filename]
 
-        print(f"[RAG] Cache cleared for: {filename}")
 
     return jsonify({
         "status": "ok"

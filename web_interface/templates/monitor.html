@@ -1,13 +1,102 @@
 {% extends "base.html" %}
-{% block title %}AI Monitor — Wall·E{% endblock %}
+{% block title %}Parent Monitor — Wall·E{% endblock %}
 
 {% block content %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 
 <style>
+  /* ── reset & base ── */
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   .pd { font-family: 'Nunito', sans-serif; color: #e6edf3; padding: 0 0 2rem; }
+
+
+  #loginOverlay {
+    position: fixed;
+    top: 68px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 99999;
+    background-color: rgba(13,17,23,0.82);
+    background-image: url("{{ url_for('static', filename='background.jpg') }}");
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-size: cover;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .login-box {
+    background: rgba(22,27,34,0.95);
+    border: 1px solid #2d3748;
+    border-radius: 18px;
+    padding: 2.5rem 2rem;
+    width: 100%; max-width: 360px;
+    display: flex; flex-direction: column; align-items: center; gap: 1.25rem;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  }
+
+  .login-logo {
+    font-size: 36px;
+    background: rgba(244,211,63,0.12);
+    border: 1px solid rgba(244,211,63,0.25);
+    border-radius: 14px;
+    width: 64px; height: 64px;
+    display: grid; place-items: center;
+  }
+
+  .login-title {
+    text-align: center;
+  }
+  .login-title h2 {
+    font-size: 18px; font-weight: 800; color: #e6edf3;
+  }
+  .login-title p {
+    font-size: 12px; color: #8b949e; margin-top: 4px;
+  }
+
+  .login-input {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid #2d3748;
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #e6edf3;
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .login-input:focus { border-color: rgba(244,211,63,0.5); }
+  .login-input::placeholder { letter-spacing: 0; color: #4a5568; font-weight: 400; }
+
+  .login-btn {
+    width: 100%;
+    padding: 10px;
+    background: rgba(244,211,63,0.15);
+    border: 1px solid rgba(244,211,63,0.35);
+    border-radius: 10px;
+    color: #F4D03F;
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px; font-weight: 800;
+    cursor: pointer;
+    transition: 0.15s;
+  }
+  .login-btn:hover { background: rgba(244,211,63,0.25); }
+  .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .login-error {
+    font-size: 12px; color: #fc8181; text-align: center;
+    background: rgba(252,129,129,0.08);
+    border: 1px solid rgba(252,129,129,0.2);
+    border-radius: 8px; padding: 7px 12px; width: 100%;
+    display: none;
+  }
+  .login-error.show { display: block; }
 
   /* ── cards ── */
   .card {
@@ -24,7 +113,6 @@
     margin-bottom: 1rem; padding-bottom: 0.75rem;
     border-bottom: 1px solid #2d3748;
   }
-
   .card-hd-icon { font-size: 16px; }
   .card-hd-title { font-size: 14px; font-weight: 700; color: #e6edf3; }
   .card-hd-sub { font-size: 12px; color: #8b949e; margin-left: auto; }
@@ -92,6 +180,27 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .spin { display: inline-block; animation: spin 1s linear infinite; }
 
+  /* ── analysis toolbar ── */
+  .analysis-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1rem;
+    padding: 10px 14px;
+    background: rgba(22,27,34,0.7);
+    border: 1px solid #2d3748;
+    border-radius: 10px;
+  }
+  .analysis-ts { font-size: 12px; color: #8b949e; }
+  .analysis-ts strong { color: #e6edf3; }
+
+  .rerun-btn {
+    font-size: 12px; padding: 6px 14px; cursor: pointer;
+    background: rgba(244,211,63,0.12); border: 1px solid rgba(244,211,63,0.3);
+    color: #F4D03F; border-radius: 8px; font-family: 'Nunito', sans-serif;
+    font-weight: 800; transition: 0.15s;
+  }
+  .rerun-btn:hover:not(:disabled) { background: rgba(244,211,63,0.22); }
+  .rerun-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
   .sign-out-btn {
     font-size: 12px; padding: 5px 12px; cursor: pointer;
     background: rgba(255,255,255,0.05); border: 1px solid #2d3748;
@@ -105,10 +214,37 @@
     .pd-sidebar { width: 100%; }
     .pd-g2 { grid-template-columns: 1fr; }
     .pd-g4 { grid-template-columns: repeat(2,1fr); }
+    .analysis-toolbar { flex-direction: column; gap: 8px; align-items: flex-start; }
   }
 </style>
 
-<div class="pd">
+<!-- ═══════════════════════════════════════════
+     LOGIN OVERLAY — shown on every page load
+     (dismissed only after correct password)
+════════════════════════════════════════════ -->
+<div id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo">🔒</div>
+    <div class="login-title">
+      <h2>Parent Monitor</h2>
+      <p>Enter your password to continue</p>
+    </div>
+    <input
+      id="monitorPwd"
+      class="login-input"
+      type="password"
+      placeholder="Password"
+      autocomplete="current-password"
+    />
+    <div class="login-error" id="loginError">Incorrect password. Please try again.</div>
+    <button class="login-btn" id="loginBtn" onclick="pdDoLogin()">Unlock</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MAIN DASHBOARD (hidden until login)
+════════════════════════════════════════════ -->
+<div class="pd" id="pdDashboard" style="display:none;">
 
   <div class="pd-top">
     <div style="display:flex;align-items:center;gap:10px;">
@@ -123,7 +259,7 @@
     <button class="pd-tab" onclick="pdTab('report',this)">📊 Learning report</button>
   </div>
 
-  <!-- SESSIONS TAB -->
+  <!-- ── SESSIONS TAB ── -->
   <div id="panelSessions" class="pd-panel on">
     <div class="pd-row">
 
@@ -155,8 +291,17 @@
     </div>
   </div>
 
-  <!-- REPORT TAB -->
+  <!-- ── REPORT TAB ── -->
   <div id="panelReport" class="pd-panel">
+
+    <!-- Analysis toolbar: timestamp + re-run button -->
+    <div class="analysis-toolbar">
+      <span class="analysis-ts" id="analysisTimestamp">No analysis generated yet.</span>
+      <button class="rerun-btn" id="rerunBtn" onclick="pdRunFreshAnalysis()">
+        🔄 Run new analysis
+      </button>
+    </div>
+
     <div class="pd-stack">
 
       <!-- Summary -->
@@ -166,11 +311,14 @@
           <span class="card-hd-title">Child overview</span>
         </div>
         <div id="pdSummaryBody">
-          <div class="loading"><span class="spin">⟳</span> Running AI analysis…</div>
+          <div class="empty">
+            No analysis has been run yet.<br>
+            Click <strong style="color:#F4D03F;">Run new analysis</strong> above to generate a report.
+          </div>
         </div>
       </div>
 
-      <!-- Metrics -->
+      <!-- Metrics row -->
       <div class="pd-g4" id="pdMetrics" style="display:none;">
         <div class="metric-card">
           <div class="metric-lbl">Curiosity</div>
@@ -196,7 +344,6 @@
 
       <!-- Charts row -->
       <div class="pd-g2" id="pdChartsRow" style="display:none;">
-
         <div class="card">
           <div class="card-hd">
             <span class="card-hd-icon">😊</span>
@@ -207,7 +354,6 @@
             <canvas id="pdEmotionChart"></canvas>
           </div>
         </div>
-
         <div class="card">
           <div class="card-hd">
             <span class="card-hd-icon">⭐</span>
@@ -215,12 +361,10 @@
           </div>
           <div id="pdInterests"><div class="empty" style="padding:.5rem;">No data yet.</div></div>
         </div>
-
       </div>
 
-      <!-- Bottom row -->
+      <!-- Concerns + Recommendations -->
       <div class="pd-g2" id="pdBottomRow" style="display:none;">
-
         <div class="card" id="pdConcernsCard" style="display:none;">
           <div class="card-hd">
             <span class="card-hd-icon">⚠️</span>
@@ -228,7 +372,6 @@
           </div>
           <ul class="pd-list" id="pdConcernsList"></ul>
         </div>
-
         <div class="card" id="pdRecsCard" style="display:none;">
           <div class="card-hd">
             <span class="card-hd-icon">💡</span>
@@ -238,44 +381,117 @@
         </div>
       </div>
 
-    </div>
-  </div>
+    </div><!-- /pd-stack -->
+  </div><!-- /panelReport -->
 
-</div>
+</div><!-- /pdDashboard -->
+
 
 <script>
-let pdEmChart = null;
-let analysisLoaded = false;
-
+/* ══════════════════════════════════════════════════
+   UTILITIES
+══════════════════════════════════════════════════ */
 function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let pdEmChart   = null;
+let pdLoggedIn  = false;
+
+
+document.getElementById('monitorPwd').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') pdDoLogin();
+});
+
+function pdDoLogin() {
+  const pwd = document.getElementById('monitorPwd').value;
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginError');
+
+  if (!pwd) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+  err.classList.remove('show');
+
+  fetch('/monitor-login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'password=' + encodeURIComponent(pwd)
+  })
+  .then(r => r.json())
+  .then(d => {
+    btn.disabled = false;
+    btn.textContent = 'Unlock';
+    if (d.ok) {
+      pdLoggedIn = true;
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('pdDashboard').style.display  = 'block';
+      pdLoadSessions();
+    } else {
+      err.classList.add('show');
+      document.getElementById('monitorPwd').value = '';
+      document.getElementById('monitorPwd').focus();
+    }
+  })
+  .catch(() => {
+    btn.disabled = false;
+    btn.textContent = 'Unlock';
+    err.textContent = 'Connection error. Is Wall·E online?';
+    err.classList.add('show');
+  });
 }
 
 function pdSignOut() {
-  fetch('/sign-out-monitor', { method: 'POST' })
-    .finally(() => { window.location.href = "{{ url_for('view.monitor') }}"; });
+  // Clear in-memory flag and re-show overlay — no server round-trip needed
+  pdLoggedIn = false;
+  document.getElementById('pdDashboard').style.display  = 'none';
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('monitorPwd').value = '';
+  document.getElementById('loginError').classList.remove('show');
+
+  // Also tell server to clear the session (belt-and-suspenders)
+  fetch('/sign-out-monitor', { method: 'POST' }).catch(() => {});
 }
+
+/* ══════════════════════════════════════════════════
+   TABS
+══════════════════════════════════════════════════ */
+let reportTabOpened = false;
 
 function pdTab(name, btn) {
   document.querySelectorAll('.pd-tab').forEach(t => t.classList.remove('on'));
   document.querySelectorAll('.pd-panel').forEach(p => p.classList.remove('on'));
   btn.classList.add('on');
   document.getElementById('panel' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('on');
-  if (name === 'report' && !analysisLoaded) { analysisLoaded = true; pdLoadAnalysis(); }
+
+  // When report tab is opened for the first time this session, load cached analysis
+  if (name === 'report' && !reportTabOpened) {
+    reportTabOpened = true;
+    pdLoadCachedAnalysis();
+  }
 }
 
-// ── Sessions ──
+/* ══════════════════════════════════════════════════
+   SESSIONS
+══════════════════════════════════════════════════ */
 function pdLoadSessions() {
   fetch('/get-sessions')
   .then(r => r.json())
   .then(data => {
     const box = document.getElementById('pdSessions');
     box.innerHTML = '';
-    if (!data || !data.length) { box.innerHTML = '<div class="empty">No sessions yet.</div>'; return; }
+    if (!data || !data.length) {
+      box.innerHTML = '<div class="empty">No sessions yet.</div>';
+      return;
+    }
     data.forEach((s, i) => {
       const div = document.createElement('div');
       div.className = 'sess-item' + (i === 0 ? ' on' : '');
-      div.innerHTML = `<div class="sess-date">📅 ${esc(s.session_timestamp || 'Session '+(i+1))}</div><div class="sess-meta">${s.total_messages||0} messages</div>`;
+      div.innerHTML = `
+        <div class="sess-date">📅 ${esc(s.session_timestamp || 'Session ' + (i + 1))}</div>
+        <div class="sess-meta">${s.total_messages || 0} messages</div>
+      `;
       div.onclick = () => {
         document.querySelectorAll('.sess-item').forEach(c => c.classList.remove('on'));
         div.classList.add('on');
@@ -286,7 +502,8 @@ function pdLoadSessions() {
     });
   })
   .catch(() => {
-    document.getElementById('pdSessions').innerHTML = '<div class="empty" style="color:#fc8181">Failed to load.</div>';
+    document.getElementById('pdSessions').innerHTML =
+      '<div class="empty" style="color:#fc8181">Failed to load sessions.</div>';
   });
 }
 
@@ -294,111 +511,197 @@ function pdOpenSession(file, label) {
   document.getElementById('sessLabel').textContent = label || '';
   const chat = document.getElementById('pdChat');
   chat.innerHTML = '<div class="loading"><span class="spin">⟳</span> Loading…</div>';
+
   fetch('/get-session/' + file)
   .then(r => r.json())
   .then(s => {
     chat.innerHTML = '';
     const msgs = s.messages || [];
-    if (!msgs.length) { chat.innerHTML = '<div class="empty">No messages.</div>'; return; }
+    if (!msgs.length) {
+      chat.innerHTML = '<div class="empty">No messages in this session.</div>';
+      return;
+    }
     msgs.forEach(m => {
       const u = m.role === 'user';
       const d = document.createElement('div');
       d.className = 'bubble ' + (u ? 'u' : 'a');
-      d.innerHTML = `<div class="bubble-lbl">${u ? 'Child' : 'Wall·E'}</div>${esc(m.content||'')}`;
+      d.innerHTML = `<div class="bubble-lbl">${u ? 'Child' : 'Wall·E'}</div>${esc(m.content || '')}`;
       chat.appendChild(d);
     });
     chat.scrollTop = chat.scrollHeight;
   })
-  .catch(() => { chat.innerHTML = '<div class="empty" style="color:#fc8181">Failed to load session.</div>'; });
-}
-
-// ── Analysis ──
-function pdLoadAnalysis() {
-  fetch('/analyze-child')
-  .then(r => r.json())
-  .then(d => {
-    if (d.error) {
-      document.getElementById('pdSummaryBody').innerHTML = `<p style="font-size:13px;color:#fc8181;">${esc(d.error)}</p>`;
-      return;
-    }
-
-    document.getElementById('pdSummaryBody').innerHTML =
-      `<p style="font-size:13px;color:#8b949e;line-height:1.65;">${esc(d.summary||'No summary available.')}</p>`;
-
-    const bm = d.behavioral_metrics || {};
-    const c  = Math.round(typeof d.curiosity_level === 'number' ? d.curiosity_level : 50);
-    const e  = Math.round(bm.engagement_level || 0);
-    const dep= Math.round(bm.learning_depth   || 0);
-    const rep= Math.round(bm.repetition_level  || 0);
-
-    document.getElementById('mCuriosity').textContent  = c;   document.getElementById('bCuriosity').style.width  = c+'%';
-    document.getElementById('mEngagement').textContent = e;   document.getElementById('bEngagement').style.width = e+'%';
-    document.getElementById('mDepth').textContent      = dep; document.getElementById('bDepth').style.width      = dep+'%';
-    document.getElementById('mRepeat').textContent     = rep; document.getElementById('bRepeat').style.width     = rep+'%';
-    document.getElementById('pdMetrics').style.display = 'grid';
-
-    const em = d.emotion || { positive:60, neutral:25, confused:15 };
-    const emColors  = ['#F4D03F','#8b949e','#fc8181'];
-    const emLabels  = [['Positive',Math.round(em.positive||0)],['Neutral',Math.round(em.neutral||0)],['Confused',Math.round(em.confused||0)]];
-    document.getElementById('emLegend').innerHTML = emLabels.map((l,i) =>
-      `<span style="display:flex;align-items:center;gap:4px;">
-        <span class="em-dot" style="background:${emColors[i]};"></span>
-        <span style="color:#8b949e;">${l[0]} ${l[1]}%</span>
-      </span>`).join('');
-
-    if (pdEmChart) pdEmChart.destroy();
-    pdEmChart = new Chart(document.getElementById('pdEmotionChart'), {
-      type: 'doughnut',
-      data: {
-        labels: emLabels.map(l => l[0]),
-        datasets: [{ data: emLabels.map(l => l[1]), backgroundColor: emColors, borderWidth: 0 }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, cutout: '68%',
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.label}: ${Math.round(c.parsed)}%` } } }
-      }
-    });
-
-    const interests = d.interests || {};
-    const iEntries  = Object.entries(interests);
-    const iBox      = document.getElementById('pdInterests');
-    if (iEntries.length) {
-      iBox.innerHTML = iEntries.map(([k,v]) =>
-        `<div class="interest-row">
-          <div class="interest-name">${esc(k)}</div>
-          <div class="interest-track"><div class="interest-fill" style="width:${Math.round(v)}%"></div></div>
-          <div class="interest-pct">${Math.round(v)}</div>
-        </div>`).join('');
-    }
-
-    document.getElementById('pdChartsRow').style.display = 'grid';
-
-    const concerns = Array.isArray(d.concerns) ? d.concerns : [];
-    const recs     = Array.isArray(d.recommendations) ? d.recommendations : [];
-    let hasBottom  = false;
-
-    if (concerns.length) {
-      document.getElementById('pdConcernsCard').style.display = 'block';
-      document.getElementById('pdConcernsList').innerHTML = concerns.map(c =>
-        `<li>⚠️ ${esc(c)}</li>`).join('');
-      hasBottom = true;
-    }
-    if (recs.length) {
-      document.getElementById('pdRecsCard').style.display = 'block';
-      document.getElementById('pdRecsList').innerHTML = recs.map(r =>
-        `<li>✅ ${esc(r)}</li>`).join('');
-      hasBottom = true;
-    }
-    if (hasBottom) document.getElementById('pdBottomRow').style.display = 'grid';
-  })
   .catch(() => {
-    document.getElementById('pdSummaryBody').innerHTML =
-      '<p style="font-size:13px;color:#fc8181;">Could not load analysis. Is Wall·E online?</p>';
+    chat.innerHTML =
+      '<div class="empty" style="color:#fc8181">Failed to load session.</div>';
   });
 }
 
-// ── Init ──
-pdLoadSessions();
+/* ══════════════════════════════════════════════════
+   ANALYSIS — LOAD CACHED
+   Called once when the report tab is first opened.
+   Fetches whatever was last saved on the server.
+   Does NOT trigger a new AI analysis.
+══════════════════════════════════════════════════ */
+function pdLoadCachedAnalysis() {
+  fetch('/analyze-child')
+  .then(r => r.json())
+  .then(d => {
+    if (d.no_cache) {
+      // Nothing saved yet — keep the default "no analysis" message
+      document.getElementById('analysisTimestamp').textContent = 'No analysis generated yet.';
+      return;
+    }
+    if (d.error) {
+      document.getElementById('pdSummaryBody').innerHTML =
+        `<p style="font-size:13px;color:#fc8181;">${esc(d.error)}</p>`;
+      return;
+    }
+    pdRenderAnalysis(d);
+  })
+  .catch(() => {
+    // Silently fail — user can still click "Run new analysis"
+  });
+}
+
+/* ══════════════════════════════════════════════════
+   ANALYSIS — RUN FRESH
+   Only triggered by the parent clicking the button.
+   Calls a separate endpoint that runs the AI and
+   overwrites the cache file on the server.
+══════════════════════════════════════════════════ */
+function pdRunFreshAnalysis() {
+  const btn = document.getElementById('rerunBtn');
+  btn.disabled = true;
+  btn.textContent = '⟳ Analysing…';
+
+  // Reset the report area to loading state
+  document.getElementById('pdSummaryBody').innerHTML =
+    '<div class="loading"><span class="spin">⟳</span> Running AI analysis…</div>';
+  document.getElementById('pdMetrics').style.display   = 'none';
+  document.getElementById('pdChartsRow').style.display = 'none';
+  document.getElementById('pdBottomRow').style.display = 'none';
+  document.getElementById('pdConcernsCard').style.display = 'none';
+  document.getElementById('pdRecsCard').style.display  = 'none';
+
+  fetch('/analyze-child-fresh', { method: 'POST' })
+  .then(r => r.json())
+  .then(d => {
+    btn.disabled = false;
+    btn.textContent = '🔄 Run new analysis';
+    if (d.error) {
+      document.getElementById('pdSummaryBody').innerHTML =
+        `<p style="font-size:13px;color:#fc8181;">${esc(d.error)}</p>`;
+      return;
+    }
+    pdRenderAnalysis(d);
+  })
+  .catch(() => {
+    btn.disabled = false;
+    btn.textContent = '🔄 Run new analysis';
+    document.getElementById('pdSummaryBody').innerHTML =
+      '<p style="font-size:13px;color:#fc8181;">Analysis failed. Is Wall·E online?</p>';
+  });
+}
+
+/* ══════════════════════════════════════════════════
+   RENDER ANALYSIS
+   Shared by both the cache loader and the fresh run.
+══════════════════════════════════════════════════ */
+function pdRenderAnalysis(d) {
+
+  // Timestamp
+  if (d.generated_at) {
+    document.getElementById('analysisTimestamp').innerHTML =
+      '📊 Last generated: <strong>' + esc(d.generated_at) + '</strong>';
+  }
+
+  // Summary paragraph
+  document.getElementById('pdSummaryBody').innerHTML =
+    `<p style="font-size:13px;color:#8b949e;line-height:1.65;">${esc(d.summary || 'No summary available.')}</p>`;
+
+  // Metrics
+  const bm  = d.behavioral_metrics || {};
+  const c   = Math.round(typeof d.curiosity_level === 'number' ? d.curiosity_level : 50);
+  const e   = Math.round(bm.engagement_level || 0);
+  const dep = Math.round(bm.learning_depth   || 0);
+  const rep = Math.round(bm.repetition_level  || 0);
+
+  document.getElementById('mCuriosity').textContent  = c;
+  document.getElementById('bCuriosity').style.width  = c   + '%';
+  document.getElementById('mEngagement').textContent = e;
+  document.getElementById('bEngagement').style.width = e   + '%';
+  document.getElementById('mDepth').textContent      = dep;
+  document.getElementById('bDepth').style.width      = dep + '%';
+  document.getElementById('mRepeat').textContent     = rep;
+  document.getElementById('bRepeat').style.width     = rep + '%';
+  document.getElementById('pdMetrics').style.display = 'grid';
+
+  // Emotion chart
+  const em       = d.emotion || { positive: 60, neutral: 25, confused: 15 };
+  const emColors = ['#F4D03F', '#8b949e', '#fc8181'];
+  const emLabels = [
+    ['Positive', Math.round(em.positive || 0)],
+    ['Neutral',  Math.round(em.neutral  || 0)],
+    ['Confused', Math.round(em.confused || 0)],
+  ];
+  document.getElementById('emLegend').innerHTML = emLabels.map((l, i) =>
+    `<span style="display:flex;align-items:center;gap:4px;">
+      <span class="em-dot" style="background:${emColors[i]};"></span>
+      <span style="color:#8b949e;">${l[0]} ${l[1]}%</span>
+    </span>`
+  ).join('');
+
+  if (pdEmChart) pdEmChart.destroy();
+  pdEmChart = new Chart(document.getElementById('pdEmotionChart'), {
+    type: 'doughnut',
+    data: {
+      labels:   emLabels.map(l => l[0]),
+      datasets: [{ data: emLabels.map(l => l[1]), backgroundColor: emColors, borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${Math.round(ctx.parsed)}%` } }
+      }
+    }
+  });
+
+  // Interests
+  const interests = d.interests || {};
+  const iEntries  = Object.entries(interests);
+  const iBox      = document.getElementById('pdInterests');
+  if (iEntries.length) {
+    iBox.innerHTML = iEntries.map(([k, v]) =>
+      `<div class="interest-row">
+        <div class="interest-name">${esc(k)}</div>
+        <div class="interest-track"><div class="interest-fill" style="width:${Math.round(v)}%"></div></div>
+        <div class="interest-pct">${Math.round(v)}</div>
+      </div>`
+    ).join('');
+  }
+
+  document.getElementById('pdChartsRow').style.display = 'grid';
+
+  // Concerns + Recommendations
+  const concerns = Array.isArray(d.concerns)        ? d.concerns        : [];
+  const recs     = Array.isArray(d.recommendations) ? d.recommendations : [];
+  let hasBottom  = false;
+
+  if (concerns.length) {
+    document.getElementById('pdConcernsCard').style.display = 'block';
+    document.getElementById('pdConcernsList').innerHTML =
+      concerns.map(c => `<li>⚠️ ${esc(c)}</li>`).join('');
+    hasBottom = true;
+  }
+  if (recs.length) {
+    document.getElementById('pdRecsCard').style.display = 'block';
+    document.getElementById('pdRecsList').innerHTML =
+      recs.map(r => `<li>✅ ${esc(r)}</li>`).join('');
+    hasBottom = true;
+  }
+  if (hasBottom) document.getElementById('pdBottomRow').style.display = 'grid';
+}
 </script>
 
 {% endblock %}

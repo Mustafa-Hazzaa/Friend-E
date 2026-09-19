@@ -115,27 +115,7 @@
       gap: 10px;
       flex-shrink: 0;
     }
-/*
-    .status {
-      font-size: 12px;
-      color: var(--muted);
-      background: #1f2937;
-      padding: 4px 10px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
 
-    .dot {
-      width: 7px;
-      height: 7px;
-      background: #4ade80;
-      border-radius: 50%;
-      box-shadow: 0 0 6px #4ade80;
-    }
-*/
 
     main {
       padding-top: 80px;
@@ -257,10 +237,7 @@
 
 
     <div class="nav-right">
-<!--      <div class="status">-->
-<!--        <span class="dot"></span>-->
-<!--        Online-->
-<!--      </div>-->
+
       {% if user.is_authenticated %}
       <a class="nav-link {% if active_page == 'settings' %}active{% endif %}"
          href="{{ url_for('view.settings') }}" style="font-size: 28px">

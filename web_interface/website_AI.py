@@ -200,6 +200,8 @@ List only if behavior suggests:
 - repetition
 - low engagement
 - frustration signals
+- any thing that the child shouldn't be asking about
+- if he has crazy and non stable thoughts
 
 ---
 
@@ -259,28 +261,20 @@ class AIPlanner:
         self.client = Client()
         self.model_name = model_name
         self.temperature = temperature
-        print(f"[AIPlanner] Initialized — model={model_name} temperature={temperature}")
 
 
     def _load_pdf(self, path):
-        print(f"\n[PDF] Loading: {path}")
         data = extract_text_from_pdf(path)
-        print(f"[PDF] Pages: {data['total_pages']} | Words: {data['total_words']} | Language: {data['language_hint']}")
-        if data.get("warnings"):
-            for w in data["warnings"]:
-                print(f"[PDF] Warning: {w}")
         return data
 
 
     def _group_pages(self, pages, max_words=500):
-        print(f"\n[CHUNK] Grouping pages (max {max_words} words/chunk)...")
         chunks = []
         buffer = ""
         word_count = 0
 
         for i, page in enumerate(pages):
             if page["is_empty"]:
-                print(f"[CHUNK] Skipping empty page {page['page_number']}")
                 continue
             text = page["text"].strip()
             if not text:
@@ -288,7 +282,6 @@ class AIPlanner:
 
             if word_count + page["word_count"] > max_words and buffer.strip():
                 chunks.append(buffer.strip())
-                print(f"[CHUNK] Chunk {len(chunks)} sealed — {word_count} words")
                 buffer = text
                 word_count = page["word_count"]
             else:
@@ -297,16 +290,10 @@ class AIPlanner:
 
         if buffer.strip():
             chunks.append(buffer.strip())
-            print(f"[CHUNK] Chunk {len(chunks)} sealed — {word_count} words (final)")
-
-        print(f"[CHUNK] Total chunks: {len(chunks)}")
         return chunks
 
 
     def _call(self, system, user):
-        print(f"\n[LLM] Calling {self.model_name}")
-        print(f"[LLM] User prompt length: {len(user)} chars")
-        print(f"[LLM] User prompt preview: {user[:120].replace(chr(10), ' ')}...")
 
         response = self.client.chat(
             model=self.model_name,
@@ -321,8 +308,6 @@ class AIPlanner:
             }
         )
         result = response["message"]["content"].strip()
-        print(f"[LLM] Response length: {len(result)} chars")
-        print(f"[LLM] Response preview: {result.replace(chr(10), ' ')}...")
         return result
 
     def speak_random(self, options):
@@ -333,14 +318,12 @@ class AIPlanner:
         return model.encode(text, normalize_embeddings=True)
 
     def summarize(self, path):
-        print("\n========== START SUMMARIZATION ==========")
 
         pdf_data = self._load_pdf(path)
         pages = pdf_data["pages"]
         total_words = pdf_data["total_words"]
 
         if total_words <= 1500:
-            print("[SUMMARIZE] Short PDF — direct Wall-E call")
             full_text = "\n\n".join(
                 p["text"].strip() for p in pages if not p["is_empty"]
             )
@@ -348,38 +331,27 @@ class AIPlanner:
                 WALLE_SYSTEM_PROMPT,
                 f"Here is the document. Summarize it now as Wall-E, spoken style, no markdown:\n\n{full_text}",
             )
-            print("[SUMMARIZE] Done.")
             return result
 
-        print("[SUMMARIZE] Long PDF — chunked pipeline")
         chunks = self._group_pages(pages)
 
         partial_summaries = []
         for i, chunk in enumerate(chunks):
-            print(f"[SUMMARIZE] Summarizing chunk {i+1}/{len(chunks)} ({len(chunk.split())} words)...")
             summary = self._call(CHUNK_SYSTEM_PROMPT, chunk)
             if summary and len(summary.split()) > 10:
                 partial_summaries.append(summary)
-                print(f"[SUMMARIZE] Chunk {i+1} accepted ({len(summary.split())} words)")
-            else:
-                print(f"[SUMMARIZE] Chunk {i+1} rejected — too short or empty")
+
 
         if not partial_summaries:
-            print("[SUMMARIZE] ERROR: No valid summaries produced")
             return "ERROR: No valid content extracted"
 
         combined = "\n".join(partial_summaries)
-        print(f"\n[SUMMARIZE] Combined {len(partial_summaries)} chunk summaries — {len(combined.split())} words total")
 
         if len(combined.split()) <= 1000:
-            print("[SUMMARIZE] Skipping combine step — going straight to Wall-E")
             clean = combined
         else:
-            print("[SUMMARIZE] Running combine step...")
             clean = self._call(COMBINE_SYSTEM_PROMPT, combined)
-            print(f"[SUMMARIZE] Combined output: {len(clean.split())} words")
 
-        print("[SUMMARIZE] Final Wall-E rewrite...")
         result = self._call(
             WALLE_SYSTEM_PROMPT,
             f"""These are the ideas from the document. 
@@ -392,11 +364,9 @@ class AIPlanner:
         A child should finish listening and know what these things are actually called.
         {clean}""",
         )
-        print("========== END SUMMARIZATION ==========\n")
         return result
 
     def generate_quiz(self, rag_store: RAGStore, count: int, difficulty: str) -> list:
-        print(f"\n========== START QUIZ GENERATION ==========")
         chunks = rag_store.chunks
 
         if difficulty == "easy":
@@ -408,13 +378,11 @@ class AIPlanner:
 
         all_questions = []
 
-        # 🔹 STEP 1: generate per chunk
         BATCH_SIZE = 2
 
         for i in range(0, len(chunks), BATCH_SIZE):
             batch = chunks[i:i + BATCH_SIZE]
             combined_text = "\n\n---\n\n".join(batch)
-            print(f"[QUIZ] Chunk {i + 1}/{len(chunks)}")
             user_prompt = f"""
             Generate {2 * len(batch)} quiz questions from this text.
 
@@ -453,17 +421,14 @@ class AIPlanner:
                 parsed = json.loads(raw)
 
                 if "error" in parsed:
-                    print("[QUIZ] Model error — skipping chunk")
                     continue
 
                 qs = parsed.get("questions", [])
                 all_questions.extend(qs)
 
             except Exception as e:
-                print(f"[QUIZ] Chunk failed: {e}")
                 continue
 
-        print(f"[QUIZ] Total generated: {len(all_questions)}")
 
         if not all_questions:
             raise ValueError("No questions generated")
@@ -479,7 +444,6 @@ class AIPlanner:
 
         all_questions = unique
 
-        print(f"[QUIZ] After deduplication: {len(all_questions)}")
 
         random.shuffle(all_questions)
 
@@ -488,41 +452,28 @@ class AIPlanner:
         for i, q in enumerate(final_questions, 1):
             q["id"] = i
 
-        print(f"[QUIZ] Final: {len(final_questions)} questions")
-        print("========== END QUIZ GENERATION ==========\n")
 
         return final_questions
 
 
     def answer_question(self, rag_store: RAGStore, question: str) -> str:
-        print(f"\n========== QA ==========")
-        print(f"[QA] Question: {question}")
 
         context = rag_store.retrieve(question, top_k=4)
-        print(f"[QA] Retrieved context: {len(context.split())} words")
-        print(f"[QA] Context preview: {context[:150].replace(chr(10), ' ')}...")
 
         result = self._call(
             QA_SYSTEM_PROMPT,
             f"DOCUMENT EXCERPTS:\n{context}\n\nQUESTION: {question}"
         )
-        print(f"[QA] Answer: {result[:150].replace(chr(10), ' ')}...")
-        print("========== END QA ==========\n")
         return result
 
     def answer_teachback(self, rag_store: RAGStore, child_explanation: str) -> str:
-        print(f"\n========== TEACHBACK ==========")
-        print(f"[TEACHBACK] Explanation: {child_explanation[:150]}...")
 
         context = rag_store.retrieve(child_explanation, top_k=7)
-        print(f"[TEACHBACK] Context: {len(context.split())} words")
 
         result = self._call(
             TEACHBACK_SYSTEM_PROMPT,
             f"DOCUMENT EXCERPTS:\n{context}\n\nWHAT THE CHILD SAID:\n{child_explanation}"
         )
-        print(f"[TEACHBACK] Feedback: {result[:150]}...")
-        print("========== END TEACHBACK ==========\n")
         return result
 
 
@@ -536,7 +487,6 @@ class AIPlanner:
 
         sim = float(emb_student @ emb_correct)
 
-        print(f"[COMPARE] Similarity: {sim:.3f}")
 
         if sim >= 0.90:
             return "MATCH"
@@ -561,9 +511,7 @@ class AIPlanner:
         return "NO_MATCH"
 
     def analyze_child(self, sessions: list):
-        print("\n========== CHILD ANALYSIS ==========")
 
-        # 🔹 collect all user messages only
         all_user_msgs = []
 
         for session in sessions:
@@ -574,27 +522,21 @@ class AIPlanner:
         if not all_user_msgs:
             return {"error": "No user messages found"}
 
-        # 🔹 reduce size (VERY IMPORTANT for LLM)
         text = "\n".join(all_user_msgs)
 
         if len(text) > 6000:
             text = text[:6000]  # simple truncation for now
 
-        print(f"[ANALYSIS] Messages used: {len(all_user_msgs)}")
-        print(f"[ANALYSIS] Text length: {len(text)}")
 
         result = self._call(
             CHILD_ANALYSIS_SYSTEM_PROMPT,
             f"Here is the child's conversation history:\n\n{text}"
         )
 
-        # 🔹 safe JSON parse
         try:
             parsed = json.loads(result)
-            print("[ANALYSIS] JSON parsed successfully")
             return parsed
         except Exception as e:
-            print("[ANALYSIS] JSON parse failed:", e)
             return {
                 "summary": result,
                 "curiosity_level": "unknown",

@@ -3,7 +3,6 @@ from flask import Blueprint, render_template, url_for, redirect, request, jsonif
 from flask_login import login_required, current_user, login_manager
 from werkzeug.security import check_password_hash
 view = Blueprint('view', __name__)
-   # or however you store it
 
 @view.route("/dashboard")
 @login_required

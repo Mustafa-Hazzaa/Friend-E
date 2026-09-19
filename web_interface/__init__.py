@@ -5,7 +5,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
 
 from web_interface import control
-import config
 
 db = SQLAlchemy()
 DB_NAME = "database.db"
@@ -25,16 +24,13 @@ def create_app():
     from web_interface.pdf import pdf
     from web_interface.control import control
     from web_interface.monitor import monitor_bp
-    # from web_interface.history import history_bp
-    # from web_interface.settings import settings
+
 
     app.register_blueprint(monitor_bp, url_prefix="/")
-    # app.register_blueprint(history_bp,url_prefix="/")
     app.register_blueprint(auth, url_prefix='/auth')
     app.register_blueprint(view, url_prefix='/')
     app.register_blueprint(pdf, url_prefix='/pdf')
     app.register_blueprint(control, url_prefix='/control')
-    # app.register_blueprint(settings, url_prefix='/settings')
 
     create_database(app)
 

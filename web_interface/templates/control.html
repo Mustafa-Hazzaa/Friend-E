@@ -2,29 +2,146 @@
 {% block title %}Control{% endblock %}
 
 {% block content %}
-<div class="row">
 
-    <div class="col-sm-12 col-md-6">
-        <div class="media">
-            <img id="stream"
-                 class="stream{% if cameraActive == 1 %} starting{% endif %}"
-                 src="{{ url_for('static', filename='streamimage.jpg') }}">
-        </div>
-    </div>
+<style>
+  .db-frame {
+    background: rgba(22, 27, 34, 0.75);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    overflow: hidden;
+    transition: border-color 0.2s;
+    margin-bottom: 0;
+  }
+  .db-frame:hover {
+    border-color: rgba(244, 208, 63, 0.2);
+  }
+  .db-frame-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #8b949e;
+    padding: 10px 14px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .db-frame-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.06);
+  }
+  .db-frame-inner {
+    padding: 6px 10px 10px;
+  }
 
-    <div class="col-sm-12 col-md-6">
-        <div id="joytext" class="joystick-text">x: 0, y: 0</div>
-        <div id="joystick" class="joystick">
-            <div id="limit" class="limit border border-secondary rounded-circle">
-                <div id="base" class="base border border-secondary rounded-circle"></div>
-                <div id="stick" class="stick border border-dark rounded-circle" style="display: none;"></div>
-            </div>
-        </div>
+  .db-top-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 700px) {
+    .db-top-row { grid-template-columns: 1fr; }
+  }
+
+  .ctrl-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #8b949e;
+    background: rgba(0,0,0,0.2);
+    transition: all 0.3s;
+    margin-left: auto;
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+  }
+  .ctrl-badge.connected {
+    color: #4ade80;
+    border-color: rgba(74,222,128,0.3);
+    background: rgba(74,222,128,0.08);
+  }
+  .ctrl-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+  .ctrl-badge.connected .ctrl-dot {
+    box-shadow: 0 0 5px #4ade80;
+    animation: ctrl-pulse 2s infinite;
+  }
+  @keyframes ctrl-pulse {
+    0%,100% { opacity: 1; } 50% { opacity: 0.35; }
+  }
+
+  #stream { border-radius: 8px; }
+
+  .s-drawer {
+    background: rgba(22, 27, 34, 0.75) !important;
+    border: 1px solid rgba(255,255,255,0.07) !important;
+    border-radius: 14px !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: border-color 0.2s;
+    overflow: hidden;
+  }
+  .s-drawer:hover {
+    border-color: rgba(244, 208, 63, 0.2) !important;
+  }
+
+  .tts-bar {
+    background: rgba(22, 27, 34, 0.85) !important;
+    border: 1px solid rgba(255,255,255,0.07) !important;
+    border-radius: 14px !important;
+    backdrop-filter: blur(10px);
+  }
+</style>
+
+<div class="db-top-row">
+
+  <div class="db-frame">
+    <div class="db-frame-label">Live Feed</div>
+    <div class="db-frame-inner">
+      <div class="media">
+        <img id="stream"
+             class="stream{% if cameraActive == 1 %} starting{% endif %}"
+             src="{{ url_for('static', filename='streamimage.jpg') }}">
+      </div>
     </div>
+  </div>
+
+  <div class="db-frame">
+    <div class="db-frame-label">
+      Drive
+      <div class="ctrl-badge" id="ctrl-badge">
+        <div class="ctrl-dot"></div>
+        <span id="ctrl-label">no controller</span>
+      </div>
+    </div>
+    <div class="db-frame-inner">
+      <div id="joytext" class="joystick-text">x: 0, y: 0</div>
+      <div id="joystick" class="joystick">
+        <div id="limit" class="limit border border-secondary rounded-circle">
+          <div id="base" class="base border border-secondary rounded-circle"></div>
+          <div id="stick" class="stick border border-dark rounded-circle" style="display: none;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </div>
 
-<!-- SERVO DRAWER -->
 <div class="s-drawer" id="s-drawer">
   <div class="s-toggle" onclick="document.getElementById('s-drawer').classList.toggle('open')">
     <div class="s-toggle-left">
@@ -51,7 +168,6 @@
   <div class="s-body">
     <div class="s-grid">
 
-      <!-- ARMS -->
       <div>
         <div class="s-group-label">Arms</div>
         <div class="s-row">
@@ -71,7 +187,6 @@
         </div>
       </div>
 
-      <!-- NECK -->
       <div>
         <div class="s-group-label">Neck</div>
         <div class="s-row">
@@ -96,7 +211,6 @@
         </div>
       </div>
 
-      <!-- EYES -->
       <div>
         <div class="s-group-label">Eyes</div>
         <div class="s-row">
@@ -121,15 +235,12 @@
   </div>
 </div>
 
-<!-- TTS BAR -->
 <div class="tts-bar">
   <span class="tts-label">SAY·THIS</span>
-
   <input class="tts-input" type="text"
          id="tts_text"
          placeholder="Type something for Wall·E to say…"
          maxlength="300">
-
   <button class="tts-btn" id="tts_btn">▶ speak</button>
 </div>
 
@@ -171,32 +282,57 @@ const STREAM_URL = "{{ pi_stream }}";
 <script>
 function startStream() {
     const img = document.getElementById("stream");
-
-    if (!STREAM_URL) {
-        console.error("STREAM_URL missing");
-        return;
-    }
-
-    console.log("Connecting stream:", STREAM_URL);
-
+    if (!STREAM_URL) { console.error("STREAM_URL missing"); return; }
     img.src = STREAM_URL;
-
     img.onerror = () => {
-        console.warn("Stream failed, falling back");
         img.src = "{{ url_for('static', filename='streamimage.jpg') }}";
     };
 }
-
 window.addEventListener("DOMContentLoaded", startStream);
 </script>
 
-<!-- ADDED: Speak button click handler -->
 <script>
 document.getElementById('tts_btn').addEventListener('click', function() {
     const text = document.getElementById('tts_text').value;
-    if (text.trim() !== "") {
-        playTTS(text);
+    if (text.trim() !== "") { playTTS(text); }
+});
+</script>
+
+<script>
+function updateCtrlBadge(connected, name) {
+  var badge  = document.getElementById('ctrl-badge');
+  var label  = document.getElementById('ctrl-label');
+  if (connected) {
+    badge.classList.add('connected');
+    label.textContent = name || 'controller';
+  } else {
+    badge.classList.remove('connected');
+    label.textContent = 'no controller';
+  }
+}
+
+window.addEventListener('load', function() {
+  if (typeof joypad !== 'undefined') {
+    joypad.on('connect', function(e) {
+      var name = (e && e.gamepad ? e.gamepad.id : '').split('(')[0].trim().slice(0,22) || 'controller';
+      updateCtrlBadge(true, name);
+    });
+    joypad.on('disconnect', function() {
+      updateCtrlBadge(false);
+    });
+    if (joypad.instances && joypad.instances[0] && joypad.instances[0].connected) {
+      var id = joypad.instances[0].id || '';
+      updateCtrlBadge(true, id.split('(')[0].trim().slice(0,22) || 'controller');
     }
+  }
+
+  /* native Gamepad API as fallback */
+  window.addEventListener('gamepadconnected', function(e) {
+    updateCtrlBadge(true, e.gamepad.id.split('(')[0].trim().slice(0,22) || 'controller');
+  });
+  window.addEventListener('gamepaddisconnected', function() {
+    updateCtrlBadge(false);
+  });
 });
 </script>
 
